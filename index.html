@@ -768,6 +768,63 @@
       color: rgba(255,255,255,0.85);
       font-size: 13px;
     }
+
+    /* ============================================== */
+    /* PWA Install Guide                              */
+    /* ============================================== */
+    .pwa-guide {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 400;
+      padding: var(--space-md);
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .pwa-guide-content {
+      background: var(--color-bg-card);
+      border-radius: var(--radius-xl);
+      padding: var(--space-xl);
+      max-width: 340px;
+      width: 100%;
+      text-align: center;
+      box-shadow: var(--shadow-lg);
+      animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .pwa-guide-emoji { font-size: 48px; margin-bottom: var(--space-sm); }
+    .pwa-guide-title { font-size: 20px; font-weight: 700; margin-bottom: var(--space-md); }
+    .pwa-guide-steps { text-align: left; margin-bottom: var(--space-md); }
+    .pwa-guide-step {
+      padding: 8px 0;
+      font-size: 15px;
+      line-height: 1.5;
+      color: var(--color-text);
+    }
+    .pwa-guide-step b { color: var(--color-primary); }
+    .pwa-guide-hint {
+      font-size: 13px;
+      color: var(--color-text-sub);
+      margin-bottom: var(--space-md);
+    }
+    .pwa-guide-close {
+      width: 100%;
+      padding: 12px;
+      background: var(--color-primary);
+      color: white;
+      border-radius: var(--radius-md);
+      font-size: 16px;
+      font-weight: 700;
+    }
   </style>
 </head>
 <body>
@@ -2508,9 +2565,15 @@
      * ================================================================= */
     const router = {
       current: 'home',
+      previous: null,
       routes: {},
       register(name, fn) { this.routes[name] = fn; },
       go(name) {
+        // 离开训练页时清理定时器
+        if (this.current === 'training' && name !== 'training') {
+          clearTrainingTimeout();
+        }
+        this.previous = this.current;
         this.current = name;
         // 隐藏所有页面
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -2803,6 +2866,20 @@
      * ================================================================= */
     const pages = {};
 
+    // 每日任务折叠切换
+    function toggleMissions() {
+      const detail = document.getElementById('missions-detail');
+      const toggle = document.getElementById('missions-toggle');
+      if (!detail || !toggle) return;
+      if (detail.style.display === 'none') {
+        detail.style.display = 'block';
+        toggle.style.transform = 'rotate(90deg)';
+      } else {
+        detail.style.display = 'none';
+        toggle.style.transform = 'rotate(0deg)';
+      }
+    }
+
     pages.home = function() {
       const progress = profiles.get('progress');
       const errorSets = profiles.get('errorSets');
@@ -2818,53 +2895,51 @@
       const streak = gamification.streakCalendar.getCurrentStreak();
 
       let html = `
-        <div class="home-header">
-          <div class="home-title">🌟 口算小达人 🌟</div>
-          <div class="home-subtitle">加油，继续！</div>
-        </div>
-      `;
-
-      // XP + Streak 概览
-      html += `
-        <div style="display:flex;gap:var(--space-sm);margin-bottom:var(--space-md)">
-          <div style="flex:1;background:var(--color-bg-card);border-radius:var(--radius-md);padding:var(--space-sm) var(--space-md);box-shadow:var(--shadow-sm)">
-            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--color-text-sub);margin-bottom:4px">
-              <span>Lv.${xpLevel}</span>
-              <span>${Math.round(xpProgress * 100)}%</span>
-            </div>
-            <div style="height:6px;background:var(--color-border);border-radius:3px;overflow:hidden">
-              <div style="height:100%;width:${xpProgress * 100}%;background:linear-gradient(90deg,var(--color-mint),var(--color-primary));border-radius:3px;transition:width 0.3s"></div>
+        <div class="home-header" style="padding:var(--space-md) 0 var(--space-sm);display:flex;align-items:center;gap:var(--space-sm);text-align:left;flex-wrap:wrap">
+          <div style="font-size:22px;font-weight:700;flex:1">🌟 口算小达人</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--color-text-sub);background:var(--color-bg-card);padding:4px 12px 4px 8px;border-radius:16px;box-shadow:var(--shadow-sm)">
+            <span style="font-weight:600;color:var(--color-primary)">Lv.${xpLevel}</span>
+            <div style="width:50px;height:4px;background:var(--color-border);border-radius:2px;overflow:hidden">
+              <div style="height:100%;width:${xpProgress * 100}%;background:linear-gradient(90deg,var(--color-mint),var(--color-primary));border-radius:2px"></div>
             </div>
           </div>
-          <div style="background:var(--color-bg-card);border-radius:var(--radius-md);padding:var(--space-sm) var(--space-md);box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:var(--space-xs)">
-            <span style="font-size:20px">${streak > 0 ? '🔥' : '📅'}</span>
-            <div>
-              <div style="font-size:18px;font-weight:700">${streak}</div>
-              <div style="font-size:11px;color:var(--color-text-sub)">天连续</div>
-            </div>
+          <div style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--color-text-sub);background:var(--color-bg-card);padding:4px 12px 4px 8px;border-radius:16px;box-shadow:var(--shadow-sm)">
+            <span>${streak > 0 ? '🔥' : '📅'}</span>
+            <span style="font-weight:600">${streak}天</span>
           </div>
         </div>
       `;
 
-      // 每日任务进度
+      // 每日任务：紧凑显示（折叠状态）
       const missionsData = gamification.missions.initDaily();
       if (missionsData && missionsData.missions.length > 0) {
-        html += `<div style="background:var(--color-bg-card);border-radius:var(--radius-md);padding:var(--space-sm) var(--space-md);margin-bottom:var(--space-md);box-shadow:var(--shadow-sm)">`;
-        html += `<div style="font-size:13px;font-weight:600;margin-bottom:var(--space-xs)">📋 今日任务</div>`;
+        const total = missionsData.missions.length;
+        const done = missionsData.missions.filter(m => m.completed).length;
+        html += `
+          <div id="missions-compact" style="margin-bottom:var(--space-sm);background:var(--color-bg-card);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);overflow:hidden;cursor:pointer" onclick="toggleMissions()">
+            <div style="display:flex;align-items:center;gap:var(--space-xs);padding:var(--space-sm) var(--space-md);font-size:14px">
+              <span>📋</span>
+              <span style="flex:1;font-weight:600">今日任务</span>
+              <span style="color:var(--color-text-sub);font-size:13px">${done}/${total}</span>
+              ${done === total ? '<span style="color:var(--color-success)">✅</span>' : ''}
+              <span id="missions-toggle" style="font-size:12px;color:var(--color-text-sub);transition:transform 0.2s">▸</span>
+            </div>
+            <div id="missions-detail" style="display:none;padding:0 var(--space-md) var(--space-sm)">
+        `;
         missionsData.missions.forEach(m => {
           const pct = Math.min(100, (m.progress / m.target) * 100);
           html += `
-            <div style="display:flex;align-items:center;gap:var(--space-xs);margin-bottom:4px;font-size:12px">
-              <span style="${m.completed ? 'color:var(--color-success)' : ''}">${m.completed ? '✅' : '⬜'}</span>
+            <div style="display:flex;align-items:center;gap:var(--space-xs);margin-bottom:3px;font-size:12px">
+              <span>${m.completed ? '✅' : '⬜'}</span>
               <span style="flex:1">${m.title}</span>
               <span style="color:var(--color-text-sub)">${Math.min(m.progress, m.target)}/${m.target}</span>
             </div>
-            <div style="height:4px;background:var(--color-border);border-radius:2px;overflow:hidden;margin-bottom:6px">
+            <div style="height:3px;background:var(--color-border);border-radius:2px;overflow:hidden;margin-bottom:4px">
               <div style="height:100%;width:${pct}%;background:${m.completed ? 'var(--color-success)' : 'var(--color-primary)'};border-radius:2px"></div>
             </div>
           `;
         });
-        html += `</div>`;
+        html += `</div></div>`;
       }
 
       // 待掌握快捷入口
@@ -3990,6 +4065,49 @@
             ui.toast('新版本已就绪', 'success', 2000);
           }
         });
+      }
+
+      // PWA 添加到主屏幕引导（仅非 standalone 模式提示一次）
+      if (!window.navigator.standalone && !matchMedia('(display-mode: standalone)').matches) {
+        const pwaGuideDone = localStorage.getItem(STORAGE_PREFIX + 'pwaGuideDone');
+        if (!pwaGuideDone) {
+          // iOS 检测
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+          if (isIOS) {
+            setTimeout(() => {
+              const existing = document.querySelector('.pwa-guide');
+              if (existing) return;
+              const guide = document.createElement('div');
+              guide.className = 'pwa-guide';
+              guide.innerHTML = `
+                <div class="pwa-guide-content">
+                  <div class="pwa-guide-emoji">📱</div>
+                  <div class="pwa-guide-title">添加到主屏幕</div>
+                  <div class="pwa-guide-steps">
+                    <div class="pwa-guide-step">1. 点击底部 <b>分享按钮</b> ⬆️</div>
+                    <div class="pwa-guide-step">2. 向下滑动选择 <b>「添加到主屏幕」</b></div>
+                    <div class="pwa-guide-step">3. 点击右上角 <b>「添加」</b></div>
+                  </div>
+                  <div class="pwa-guide-hint">添加后可离线使用，体验更好 ✨</div>
+                  <button class="pwa-guide-close">我知道了</button>
+                </div>
+              `;
+              document.body.appendChild(guide);
+              guide.querySelector('.pwa-guide-close').onclick = () => {
+                guide.remove();
+                localStorage.setItem(STORAGE_PREFIX + 'pwaGuideDone', '1');
+              };
+              // 背景点击关闭
+              guide.onclick = (e) => {
+                if (e.target === guide) {
+                  guide.remove();
+                  localStorage.setItem(STORAGE_PREFIX + 'pwaGuideDone', '1');
+                }
+              };
+            }, 2000);
+          }
+        }
       }
 
       // 5. 检查版本更新
