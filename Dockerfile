@@ -12,6 +12,9 @@ COPY manifest.json /usr/share/nginx/html/
 COPY service-worker.js /usr/share/nginx/html/
 COPY icons/ /usr/share/nginx/html/icons/
 
+# 确保文件权限正确（从 Windows COPY 可能权限不足）
+RUN chmod -R 755 /usr/share/nginx/html
+
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget -qO- http://localhost/ || exit 1
