@@ -1,0 +1,4052 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#5BA8E0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="口算">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <title>口算小达人</title>
+  <style>
+    /* ============================================== */
+    /* CSS Variables                                  */
+    /* ============================================== */
+    :root {
+      --color-primary: #5BA8E0;
+      --color-success: #2D8C3C;
+      --color-error: #C03A2B;
+      --color-warning: #FFC857;
+      --color-pink: #FF9AA2;
+      --color-purple: #C8A8E9;
+      --color-mint: #7BD389;
+
+      --color-text: #2C3E50;
+      --color-text-sub: #7F8C8D;
+      --color-bg: #FFFBF5;
+      --color-bg-card: #FFFFFF;
+      --color-bg-error: #FDECE9;
+      --color-bg-success: #E8F8EC;
+      --color-bg-warn: #FFF8E5;
+      --color-border: #E8E2D5;
+
+      --radius-sm: 12px;
+      --radius-md: 16px;
+      --radius-lg: 20px;
+      --radius-xl: 24px;
+
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+
+      --space-xs: 8px;
+      --space-sm: 12px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+    }
+
+    /* ============================================== */
+    /* Reset                                          */
+    /* ============================================== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 16px;
+      color: var(--color-text);
+      background: var(--color-bg);
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; }
+    button:disabled { cursor: not-allowed; opacity: 0.5; }
+
+    /* ============================================== */
+    /* Layout                                         */
+    /* ============================================== */
+    #app {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right)
+               env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    .page { display: none; flex-direction: column; flex: 1; min-height: 0; }
+    .page.active { display: flex; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      padding: var(--space-md);
+      gap: var(--space-sm);
+      background: var(--color-bg);
+      flex-shrink: 0;
+    }
+    .topbar-back {
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; color: var(--color-text);
+    }
+    .topbar-title {
+      flex: 1; font-size: 20px; font-weight: 600;
+    }
+    .topbar-icon {
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; color: var(--color-text-sub);
+    }
+    .topbar-icon .badge {
+      position: absolute; top: 4px; right: 4px;
+      min-width: 18px; height: 18px; padding: 0 4px;
+      background: var(--color-error); color: white;
+      border-radius: 9px; font-size: 11px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .topbar-icon { position: relative; }
+
+    .topbar-profile {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px 4px 4px;
+      background: var(--color-bg-card);
+      border-radius: 22px;
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .profile-avatar-mini {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      background: var(--color-bg);
+    }
+    .profile-name-mini {
+      font-size: 14px; font-weight: 600;
+      max-width: 48px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .profile-arrow { font-size: 10px; color: var(--color-text-sub); }
+
+    /* Profile Picker */
+    .profile-picker-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      align-items: center; justify-content: center;
+      z-index: 300;
+      padding: var(--space-md);
+    }
+    .profile-picker-backdrop.show { display: flex; }
+    .profile-picker {
+      background: var(--color-bg-card);
+      border-radius: var(--radius-xl);
+      padding: var(--space-lg);
+      max-width: 360px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+    }
+    .profile-picker-header {
+      display: flex; align-items: center;
+      margin-bottom: var(--space-md);
+    }
+    .profile-picker-title {
+      flex: 1; font-size: 18px; font-weight: 700;
+    }
+    .profile-picker-close {
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; color: var(--color-text-sub);
+      border-radius: 50%;
+    }
+    .profile-picker-list {
+      display: flex; flex-direction: column;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+    }
+    .profile-picker-item {
+      display: flex; align-items: center;
+      gap: var(--space-sm);
+      padding: var(--space-md);
+      background: var(--color-bg);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .profile-picker-item:active { background: var(--color-border); }
+    .profile-picker-item.active { border: 2px solid var(--color-primary); }
+    .profile-picker-item-avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      background: var(--color-bg-card);
+    }
+    .profile-picker-item-info { flex: 1; }
+    .profile-picker-item-name { font-size: 16px; font-weight: 600; }
+    .profile-picker-item-meta { font-size: 12px; color: var(--color-text-sub); }
+    .profile-picker-item-delete {
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; color: var(--color-error);
+      opacity: 0.5;
+      border-radius: 50%;
+    }
+    .profile-picker-item-delete:active { opacity: 1; }
+    .profile-picker-add {
+      width: 100%;
+      padding: 12px;
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: 15px; font-weight: 600;
+      color: var(--color-primary);
+      text-align: center;
+    }
+
+    .content {
+      flex: 1; min-height: 0; overflow-y: auto;
+      padding: 0 var(--space-md);
+    }
+
+    .bottombar {
+      display: flex;
+      gap: var(--space-xs);
+      padding: var(--space-sm) var(--space-md);
+      background: var(--color-bg);
+      border-top: 1px solid var(--color-border);
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+
+    /* ============================================== */
+    /* Home Page                                      */
+    /* ============================================== */
+    .home-header {
+      text-align: center;
+      padding: var(--space-lg) 0;
+    }
+    .home-title {
+      font-size: 32px; font-weight: 700; color: var(--color-primary);
+    }
+    .home-subtitle {
+      font-size: 16px; color: var(--color-text-sub);
+      margin-top: var(--space-xs);
+    }
+
+    .level-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--space-md);
+      margin-bottom: var(--space-lg);
+    }
+    @media (min-width: 768px) {
+      .level-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    .level-card {
+      background: var(--color-bg-card);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+    .level-card.locked { opacity: 0.5; }
+    .level-card.passed { border: 2px solid var(--color-success); }
+    .level-card-header {
+      display: flex; align-items: center; gap: var(--space-sm);
+    }
+    .level-icon { font-size: 36px; }
+    .level-name { font-size: 20px; font-weight: 600; flex: 1; }
+    .level-status { font-size: 14px; color: var(--color-text-sub); }
+    .level-status.passed { color: var(--color-success); }
+    .level-desc { font-size: 14px; color: var(--color-text-sub); }
+    .level-progress {
+      height: 8px; background: var(--color-border);
+      border-radius: 4px; overflow: hidden;
+    }
+    .level-progress-bar {
+      height: 100%; background: linear-gradient(90deg, var(--color-mint), var(--color-primary));
+      transition: width 0.4s ease;
+    }
+    .level-stats {
+      display: flex; justify-content: space-between;
+      font-size: 13px; color: var(--color-text-sub);
+    }
+    .level-stats .pending { color: var(--color-warning); font-weight: 600; }
+
+    .level-thumbs {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: var(--space-xs);
+    }
+    @media (min-width: 768px) {
+      .level-thumbs { grid-template-columns: repeat(6, 1fr); }
+    }
+    .level-thumb {
+      aspect-ratio: 1;
+      background: var(--color-bg-card);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-sm);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 2px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .level-thumb:active { transform: scale(0.95); }
+    .level-thumb.locked { opacity: 0.4; cursor: not-allowed; }
+    .level-thumb.passed { background: #E8F8EC; }
+    .level-thumb-icon { font-size: 18px; }
+    .level-thumb-name { color: var(--color-text-sub); }
+    .level-thumb-status { font-size: 10px; color: var(--color-text-sub); }
+
+    .errors-shortcut {
+      background: var(--color-bg-card);
+      border-radius: var(--radius-lg);
+      padding: var(--space-md);
+      box-shadow: var(--shadow-sm);
+      display: flex; align-items: center;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+    }
+    .errors-shortcut-icon { font-size: 28px; }
+    .errors-shortcut-body { flex: 1; }
+    .errors-shortcut-title { font-size: 16px; font-weight: 600; }
+    .errors-shortcut-desc { font-size: 12px; color: var(--color-text-sub); }
+    .errors-shortcut-btn {
+      background: var(--color-primary); color: white;
+      padding: 8px 16px; border-radius: var(--radius-md);
+      font-size: 14px; font-weight: 600;
+    }
+
+    /* ============================================== */
+    /* Training Page                                  */
+    /* ============================================== */
+    .training-progress {
+      background: var(--color-bg-card);
+      border-radius: var(--radius-md);
+      padding: var(--space-sm) var(--space-md);
+      margin: 0 var(--space-md) var(--space-md);
+      box-shadow: var(--shadow-sm);
+    }
+    .training-progress-top {
+      display: flex; justify-content: space-between;
+      font-size: 13px; margin-bottom: 6px;
+    }
+    .training-progress-top .pending { color: var(--color-warning); }
+    .training-progress-bar {
+      height: 8px; background: var(--color-border);
+      border-radius: 4px; overflow: hidden;
+    }
+    .training-progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--color-mint), var(--color-primary));
+      transition: width 0.3s;
+    }
+
+    .timeout-bar {
+      height: 6px; background: var(--color-border);
+      border-radius: 3px; overflow: hidden;
+      margin: 0 var(--space-md) var(--space-md);
+    }
+    .timeout-bar-fill {
+      height: 100%; background: var(--color-primary);
+      transition: width linear, background 0.2s;
+    }
+    .timeout-bar-fill.warn {
+      background: var(--color-warning);
+    }
+
+    .expr-area {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center;
+      padding: var(--space-md);
+      min-height: 100px;
+    }
+    .expr {
+      font-size: 80px;
+      font-weight: 700;
+      color: var(--color-text);
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+    @media (orientation: landscape) {
+      .expr { font-size: 110px; }
+    }
+    @media (max-width: 500px) {
+      .expr { font-size: 60px; }
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-md);
+      padding: var(--space-md);
+    }
+    @media (orientation: landscape) {
+      .options { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    .option {
+      min-height: 100px;
+      background: var(--color-bg-card);
+      border: 3px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+      font-size: 48px;
+      font-weight: 700;
+      color: var(--color-text);
+      transition: all 0.15s ease;
+      display: flex; align-items: center; justify-content: center;
+    }
+    @media (min-width: 1024px) {
+      .option { min-height: 120px; font-size: 56px; }
+    }
+    .option:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+    .option.correct {
+      background: var(--color-bg-success);
+      border-color: var(--color-success);
+      color: var(--color-success);
+    }
+    .option.wrong {
+      background: var(--color-bg-error);
+      border-color: var(--color-error);
+      color: var(--color-error);
+    }
+    .option.timeout-warn {
+      border-color: var(--color-warning);
+      background: var(--color-bg-warn);
+    }
+    .option.dimmed { opacity: 0.4; }
+    .option.eliminated {
+      opacity: 0.25;
+      background: var(--color-bg-error);
+      border-color: var(--color-error);
+    }
+
+    @keyframes correctPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+    @keyframes wrongShake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-10px); }
+      40%, 80% { transform: translateX(10px); }
+    }
+    @keyframes optionPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+    }
+
+    /* ============================================== */
+    /* Bottom Bar (Level Switch)                      */
+    /* ============================================== */
+    .level-btn {
+      flex: 1;
+      min-width: 60px;
+      min-height: 56px;
+      padding: 6px 8px;
+      background: var(--color-bg-card);
+      border-radius: var(--radius-sm);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 2px;
+      font-size: 11px;
+      color: var(--color-text);
+      transition: all 0.1s;
+    }
+    .level-btn.locked { opacity: 0.4; }
+    .level-btn.active { background: var(--color-primary); color: white; }
+    .level-btn.passed { border: 2px solid var(--color-success); }
+    .level-btn-icon { font-size: 20px; }
+
+    /* ============================================== */
+    /* Toast / Feedback                               */
+    /* ============================================== */
+    .toast {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.85);
+      color: white;
+      padding: var(--space-md) var(--space-lg);
+      border-radius: var(--radius-lg);
+      font-size: 20px;
+      font-weight: 600;
+      z-index: 200;
+      pointer-events: none;
+    }
+    .toast.success { background: var(--color-success); }
+    .toast.error { background: var(--color-error); }
+    .toast.warn { background: var(--color-warning); color: var(--color-text); }
+
+    /* ============================================== */
+    /* Modal                                          */
+    /* ============================================== */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      align-items: center; justify-content: center;
+      z-index: 300;
+      padding: var(--space-md);
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal {
+      background: var(--color-bg-card);
+      border-radius: var(--radius-xl);
+      padding: var(--space-lg);
+      max-width: 420px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+    }
+    .modal-title {
+      font-size: 20px; font-weight: 700;
+      margin-bottom: var(--space-sm);
+    }
+    .modal-body {
+      font-size: 15px; color: var(--color-text-sub);
+      margin-bottom: var(--space-lg);
+      line-height: 1.5;
+    }
+    .modal-actions {
+      display: flex; gap: var(--space-sm);
+    }
+    .modal-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      font-size: 16px; font-weight: 600;
+    }
+    .modal-btn.primary { background: var(--color-primary); color: white; }
+    .modal-btn.danger { background: var(--color-error); color: white; }
+    .modal-btn.ghost {
+      background: var(--color-bg);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+    }
+    .modal-input {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-md);
+      font-family: inherit;
+    }
+    .modal-input:focus { outline: none; border-color: var(--color-primary); }
+
+    /* ============================================== */
+    /* Parent Panel                                   */
+    /* ============================================== */
+    .panel-section {
+      background: var(--color-bg-card);
+      border-radius: var(--radius-lg);
+      padding: var(--space-md);
+      margin-bottom: var(--space-md);
+      box-shadow: var(--shadow-sm);
+    }
+    .panel-section-title {
+      font-size: 16px; font-weight: 700;
+      margin-bottom: var(--space-sm);
+      display: flex; align-items: center; gap: var(--space-xs);
+    }
+    .panel-row {
+      display: flex; justify-content: space-between;
+      align-items: center;
+      padding: var(--space-sm) 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .panel-row:last-child { border-bottom: none; }
+    .panel-row-label { font-size: 14px; }
+    .panel-row-value { font-size: 14px; color: var(--color-text-sub); }
+    .panel-row select, .panel-row input[type="text"] {
+      padding: 6px 12px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .panel-btn {
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 600;
+      background: var(--color-primary);
+      color: white;
+    }
+    .panel-btn.danger { background: var(--color-error); }
+    .panel-btn.ghost {
+      background: var(--color-bg);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+    }
+    .panel-error-item {
+      display: flex; align-items: center; gap: var(--space-sm);
+      padding: var(--space-sm) 0;
+      border-bottom: 1px solid var(--color-border);
+      font-size: 14px;
+    }
+    .panel-error-item:last-child { border-bottom: none; }
+    .panel-error-item .expr { font-size: 16px; font-weight: 600; flex: 1; }
+    .panel-error-item .meta { font-size: 12px; color: var(--color-text-sub); }
+    .panel-error-item.mastered { opacity: 0.6; }
+    .panel-error-item.mastered .meta { color: var(--color-success); }
+
+    .panel-bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: var(--space-xs);
+      height: 80px;
+      padding: var(--space-sm) 0;
+    }
+    .panel-bar-day {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .panel-bar-fill {
+      width: 100%;
+      background: linear-gradient(180deg, var(--color-mint), var(--color-primary));
+      border-radius: 4px 4px 0 0;
+      min-height: 2px;
+      transition: height 0.3s;
+    }
+    .panel-bar-label { font-size: 11px; color: var(--color-text-sub); }
+
+    /* ============================================== */
+    /* Errors Page                                    */
+    /* ============================================== */
+    .tab-bar {
+      display: flex;
+      gap: var(--space-xs);
+      padding: 0 var(--space-md);
+      margin-bottom: var(--space-md);
+    }
+    .tab {
+      flex: 1;
+      padding: 10px 12px;
+      background: var(--color-bg-card);
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      color: var(--color-text-sub);
+      box-shadow: var(--shadow-sm);
+    }
+    .tab.active {
+      background: var(--color-primary);
+      color: white;
+    }
+
+    .errors-info {
+      background: var(--color-bg-warn);
+      border-radius: var(--radius-md);
+      padding: var(--space-sm) var(--space-md);
+      margin: 0 var(--space-md) var(--space-md);
+      font-size: 13px;
+      color: var(--color-text);
+    }
+
+    .error-item {
+      background: var(--color-bg-card);
+      border-radius: var(--radius-md);
+      padding: var(--space-md);
+      margin-bottom: var(--space-sm);
+      box-shadow: var(--shadow-sm);
+    }
+    .error-item .expr { font-size: 20px; font-weight: 600; }
+    .error-item .meta {
+      font-size: 12px; color: var(--color-text-sub);
+      margin-top: 4px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: var(--space-xl) var(--space-md);
+      color: var(--color-text-sub);
+    }
+    .empty-state .emoji { font-size: 48px; margin-bottom: var(--space-sm); }
+    .empty-state .msg { font-size: 16px; }
+
+    /* ============================================== */
+    /* Buttons                                        */
+    /* ============================================== */
+    .btn {
+      padding: 12px 24px;
+      border-radius: var(--radius-md);
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.1s;
+    }
+    .btn:active:not(:disabled) { transform: scale(0.96); }
+    .btn-primary { background: var(--color-primary); color: white; }
+    .btn-success { background: var(--color-success); color: white; }
+    .btn-danger { background: var(--color-error); color: white; }
+    .btn-ghost {
+      background: var(--color-bg-card);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+    }
+
+    /* ============================================== */
+    /* Celebration                                    */
+    /* ============================================== */
+    .celebration {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      align-items: center; justify-content: center;
+      z-index: 400;
+      flex-direction: column;
+    }
+    .celebration.show { display: flex; }
+    .celebration .emoji { font-size: 100px; }
+    .celebration .title {
+      color: white; font-size: 32px; font-weight: 700;
+      margin-top: var(--space-md);
+    }
+    .celebration .subtitle {
+      color: white; font-size: 18px;
+      margin-top: var(--space-sm);
+    }
+    .celebration .btn {
+      margin-top: var(--space-lg);
+    }
+
+    /* Confetti */
+    .confetti-container { position: fixed; inset: 0; pointer-events: none; z-index: 350; overflow: hidden; }
+    .confetti {
+      position: absolute; width: 10px; height: 10px;
+      animation: confetti-fall 2s ease-out forwards;
+    }
+    @keyframes confetti-fall {
+      0% { transform: translateY(-100px) rotate(0); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+
+    /* ============================================== */
+    /* Update Banner                                  */
+    /* ============================================== */
+    .update-banner {
+      display: none;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: var(--space-sm) var(--space-md);
+      background: linear-gradient(135deg, #5BA8E0, #7BD389);
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .update-banner-msg { flex: 1; }
+    .update-banner-btn {
+      padding: 6px 16px;
+      background: white;
+      color: var(--color-primary);
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .update-banner-later {
+      padding: 6px 12px;
+      color: rgba(255,255,255,0.85);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+
+    <!-- Update Banner -->
+    <div class="update-banner" id="update-banner">
+      <span class="update-banner-msg">新版本可用</span>
+      <button class="update-banner-btn">更新</button>
+      <button class="update-banner-later">稍后</button>
+    </div>
+
+    <!-- Home Page -->
+    <div id="page-home" class="page active">
+      <div class="topbar">
+        <div class="topbar-profile" id="profile-selector" role="button" aria-label="切换孩子">
+          <span class="profile-avatar-mini" id="home-profile-avatar">👦</span>
+          <span class="profile-name-mini" id="home-profile-name">小朋友</span>
+          <span class="profile-arrow">▾</span>
+        </div>
+        <div class="topbar-title">口算小达人</div>
+        <div class="topbar-icon" id="icon-achievements" role="button" aria-label="成就">🏅<span class="badge" id="badge-achievements" style="display:none">0</span></div>
+        <div class="topbar-icon" id="icon-parent" role="button" aria-label="家长">⚙️</div>
+      </div>
+      <div class="content" id="home-content"></div>
+    </div>
+
+    <!-- Training Page -->
+    <div id="page-training" class="page">
+      <div class="topbar">
+        <div class="topbar-back" id="training-back" role="button" aria-label="返回">←</div>
+        <div class="topbar-title" id="training-title">第 1 关</div>
+        <div class="topbar-icon" id="training-parent" role="button" aria-label="家长">⚙️</div>
+      </div>
+      <div class="training-progress">
+        <div class="training-progress-top">
+          <span id="progress-label">已掌握 0 道</span>
+          <span class="pending" id="progress-pending">待掌握 0 道</span>
+        </div>
+        <div style="display:flex;justify-content:center;font-size:12px;color:var(--color-text-sub);margin-top:2px">
+          <span id="difficulty-label"></span>
+        </div>
+        <div class="training-progress-bar">
+          <div class="training-progress-bar-fill" id="progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="timeout-bar">
+        <div class="timeout-bar-fill" id="timeout-fill" style="width:100%"></div>
+      </div>
+      <div class="expr-area">
+        <div class="expr" id="expr-text">3 + 5 = ?</div>
+      </div>
+      <div class="options" id="options-grid"></div>
+      <div class="bottombar" id="training-bottombar"></div>
+    </div>
+
+    <!-- Parent Panel Page -->
+    <div id="page-parent" class="page">
+      <div class="topbar">
+        <div class="topbar-back" id="parent-back" role="button" aria-label="返回">←</div>
+        <div class="topbar-title">家长面板</div>
+      </div>
+      <div class="content" id="parent-content"></div>
+    </div>
+
+    <!-- Errors Page -->
+    <div id="page-errors" class="page">
+      <div class="topbar">
+        <div class="topbar-back" id="errors-back" role="button" aria-label="返回">←</div>
+        <div class="topbar-title">错题本</div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab active" data-tab="pending">⏳ 待掌握</div>
+        <div class="tab" data-tab="history">📚 历史</div>
+      </div>
+      <div class="errors-info" id="errors-info">
+        💡 这些题会在你继续练习时自动重出
+      </div>
+      <div class="content" id="errors-content"></div>
+    </div>
+
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <!-- Modal -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal" id="modal"></div>
+  </div>
+
+  <!-- Celebration -->
+  <div class="celebration" id="celebration">
+    <div class="emoji" id="celebration-emoji">🎉</div>
+    <div class="title" id="celebration-title">通关啦！</div>
+    <div class="subtitle" id="celebration-subtitle"></div>
+    <button class="btn btn-primary" id="celebration-btn">继续</button>
+  </div>
+
+  <!-- Confetti container -->
+  <div class="confetti-container" id="confetti"></div>
+
+  <!-- Profile Picker -->
+  <div class="profile-picker-backdrop" id="profile-picker">
+    <div class="profile-picker">
+      <div class="profile-picker-header">
+        <div class="profile-picker-title">切换孩子</div>
+        <button class="profile-picker-close" id="profile-picker-close">✕</button>
+      </div>
+      <div class="profile-picker-list" id="profile-picker-list"></div>
+      <button class="profile-picker-add" id="profile-picker-add">＋ 添加孩子</button>
+    </div>
+  </div>
+
+  <script>
+  /* =================================================================
+   * 口算小达人 - 单文件应用
+   * 命名空间：window.hx
+   * ================================================================= */
+  (function() {
+    'use strict';
+
+    const STORAGE_PREFIX = 'hx.';
+    const SCHEMA_VERSION = 4;
+    const APP_VERSION = '1.1.0';
+
+    /* =================================================================
+     * 模块：autoUpdate（GitHub 版本检查 + 自动更新）
+     * ================================================================= */
+    const autoUpdate = {
+      // 用户需将其改为自己的 GitHub 仓库
+      GITHUB_REPO: 'ybid/haoxue',
+      get GITHUB_API() {
+        return `https://api.github.com/repos/${this.GITHUB_REPO}/releases/latest`;
+      },
+      get tagUrl() {
+        return `https://github.com/${this.GITHUB_REPO}/releases/latest`;
+      },
+
+      async check() {
+        // 只有发布到远程时才检查
+        if (this.GITHUB_REPO === 'YourName/haoxue') return;
+        const info = this.getInfo();
+        // 每小时最多检查一次
+        if (info.checkedAt && Date.now() - info.checkedAt < 3600000) return;
+        try {
+          const resp = await fetch(this.GITHUB_API, { signal: AbortSignal.timeout(5000) });
+          if (!resp.ok) return;
+          const release = await resp.json();
+          const latestVer = (release.tag_name || '').replace(/^v/, '');
+          if (latestVer && latestVer > APP_VERSION) {
+            info.latestVersion = latestVer;
+            info.latestReleaseUrl = release.html_url || this.tagUrl;
+            info.checkedAt = Date.now();
+            this.saveInfo(info);
+            this.showBanner(latestVer);
+          }
+        } catch (e) {
+          // 网络不可用 / GitHub 限流 —— 静默失败
+        }
+      },
+
+      getInfo() {
+        try {
+          const raw = localStorage.getItem(STORAGE_PREFIX + 'versionInfo');
+          return raw ? JSON.parse(raw) : { currentVersion: APP_VERSION, checkedAt: null, latestVersion: null, latestReleaseUrl: null };
+        } catch { return { currentVersion: APP_VERSION, checkedAt: null, latestVersion: null, latestReleaseUrl: null }; }
+      },
+
+      saveInfo(info) {
+        try { localStorage.setItem(STORAGE_PREFIX + 'versionInfo', JSON.stringify(info)); } catch {}
+      },
+
+      showBanner(version) {
+        const el = document.getElementById('update-banner');
+        if (!el) return;
+        const msg = el.querySelector('.update-banner-msg');
+        if (msg) msg.textContent = `新版本 v${version} 可用`;
+        el.style.display = 'flex';
+
+        // 更新按钮
+        const updateBtn = el.querySelector('.update-banner-btn');
+        if (updateBtn) {
+          updateBtn.onclick = () => {
+            // 打开 Release 页面
+            const info = this.getInfo();
+            if (info.latestReleaseUrl) {
+              window.open(info.latestReleaseUrl, '_blank');
+            }
+          };
+        }
+
+        // 稍后提醒
+        const laterBtn = el.querySelector('.update-banner-later');
+        if (laterBtn) {
+          laterBtn.onclick = () => {
+            el.style.display = 'none';
+          };
+        }
+      }
+    };
+
+    /* =================================================================
+     * 模块：utils
+     * ================================================================= */
+    const utils = {};
+
+    utils.randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+    utils.randFloat = () => Math.random();
+    utils.pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    utils.shuffle = (arr) => {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+    utils.formatTime = (ms) => {
+      const sec = Math.floor(ms / 1000);
+      if (sec < 60) return sec + '秒';
+      const min = Math.floor(sec / 60);
+      const s = sec % 60;
+      return min + '分' + s + '秒';
+    };
+    utils.formatDate = (ts) => {
+      const d = new Date(ts);
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${d.getFullYear()}-${m}-${day}`;
+    };
+    utils.escapeHtml = (s) => String(s).replace(/[<>&"']/g, c =>
+      ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
+    // 格式化算式用于显示（在算子两边加空格）
+    utils.formatExprForDisplay = (expr) => expr.replace(/([+\-×÷])/g, ' $1 ');
+
+    /* =================================================================
+     * 模块：store（localStorage 封装）
+     * ================================================================= */
+    const store = {
+      cache: {},
+      get(key, defaultVal) {
+        if (key in this.cache) return this.cache[key];
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw === null) {
+            this.cache[key] = defaultVal;
+            return defaultVal;
+          }
+          this.cache[key] = JSON.parse(raw);
+          return this.cache[key];
+        } catch (e) {
+          console.warn('store.get failed', key, e);
+          this.cache[key] = defaultVal;
+          return defaultVal;
+        }
+      },
+      set(key, val) {
+        try {
+          this.cache[key] = val;
+          localStorage.setItem(key, JSON.stringify(val));
+          return true;
+        } catch (e) {
+          console.warn('store.set failed', key, e);
+          if (e.name === 'QuotaExceededError') {
+            this.cleanupOldErrors();
+            try {
+              localStorage.setItem(key, JSON.stringify(val));
+              this.cache[key] = val;
+              return true;
+            } catch (e2) {
+              return false;
+            }
+          }
+          return false;
+        }
+      },
+      remove(key) {
+        delete this.cache[key];
+        localStorage.removeItem(key);
+      },
+      clearAll() {
+        Object.keys(localStorage)
+          .filter(k => k.startsWith(STORAGE_PREFIX))
+          .forEach(k => localStorage.removeItem(k));
+        this.cache = {};
+      },
+      // ---- 全局数据（不加 profile 前缀） ----
+      getGlobal(key, defaultVal) { return this.get(STORAGE_PREFIX + key, defaultVal); },
+      setGlobal(key, val) { return this.set(STORAGE_PREFIX + key, val); },
+      removeGlobal(key) { this.remove(STORAGE_PREFIX + key); },
+      // ---- Profile 作用域数据 ----
+      getForProfile(pid, key, defaultVal) { return this.get(this._profileKey(pid, key), defaultVal); },
+      setForProfile(pid, key, val) { return this.set(this._profileKey(pid, key), val); },
+      removeForProfile(pid, key) { this.remove(this._profileKey(pid, key)); },
+      _profileKey(pid, key) { return `${STORAGE_PREFIX}${pid}.${key}`; },
+      // ---- 检查旧版数据是否存在（用于迁移） ----
+      hasOldData() { return localStorage.getItem(STORAGE_PREFIX + 'mastery') !== null; },
+      cleanupOldErrors() {
+        // 遍历所有 profile 清理最旧的已掌握题
+        const profileList = store.getGlobal('profiles');
+        const pids = profileList?.list?.map(p => p.id) || [];
+        // 如果 profiles 未初始化，尝试当前 activeId
+        const ids = pids.length > 0 ? pids : (profiles.activeId ? [profiles.activeId] : []);
+        ids.forEach(pid => {
+          const mastery = store.getForProfile(pid, 'mastery');
+          if (!mastery?.byLevel) return;
+          Object.values(mastery.byLevel).forEach(level => {
+            const mastered = Object.entries(level.questions || {})
+              .filter(([_, q]) => q.status === 'mastered')
+              .sort((a, b) => (a[1].firstCorrectAt || 0) - (b[1].firstCorrectAt || 0));
+            if (mastered.length > 50) {
+              mastered.slice(0, mastered.length - 50).forEach(([expr]) => {
+                delete level.questions[expr];
+                level.stats.mastered = Math.max(0, (level.stats.mastered || 0) - 1);
+              });
+            }
+          });
+          store.setForProfile(pid, 'mastery', mastery);
+        });
+      }
+    };
+
+    /* =================================================================
+     * 模块：schema（默认数据）
+     * ================================================================= */
+    const schema = {
+      defaults: {
+        'hx.profile': () => ({
+          schemaVer: SCHEMA_VERSION,
+          createdAt: Date.now(),
+          lastActiveAt: Date.now(),
+          totalActiveMs: 0,
+          appVersion: APP_VERSION
+        }),
+        'hx.settings': () => ({
+          schemaVer: SCHEMA_VERSION,
+          sound: true,
+          motion: true,
+          fontSize: 'normal',
+          timeoutSecByType: { single: 5, double: 10 },
+          timeoutWarnSec: 3,
+          cooldownMinutes: 5,
+          cooldownThreshold: 5,
+          challengeDurationSec: 60
+        }),
+        'hx.progress': () => ({
+          schemaVer: SCHEMA_VERSION,
+          levels: {}
+        }),
+        'hx.mastery': () => ({
+          schemaVer: SCHEMA_VERSION,
+          byLevel: {}
+        }),
+        'hx.errorSets': () => ({
+          schemaVer: SCHEMA_VERSION,
+          byLevel: {}
+        }),
+        'hx.errors': () => ({
+          schemaVer: SCHEMA_VERSION,
+          items: []
+        }),
+        'hx.achievements': () => ({
+          schemaVer: SCHEMA_VERSION,
+          unlocked: [],
+          totalUnlocked: 0
+        }),
+        'hx.challenges': () => ({
+          schemaVer: SCHEMA_VERSION,
+          byLevel: {}
+        }),
+        'hx.daily': () => ({
+          schemaVer: SCHEMA_VERSION,
+          byDate: {}
+        })
+      },
+      init() {
+        // ---- v3 → v4 迁移：将旧全局数据迁移到 profile 作用域 ----
+        if (store.hasOldData()) {
+          this._migrateV3toV4();
+        } else {
+          // 确保所有 key 存在（仅在全新安装时）
+          Object.entries(this.defaults).forEach(([key, factory]) => {
+            if (store.get(key) === undefined || store.get(key) === null) {
+              store.set(key, factory());
+            }
+          });
+          // 更新 schemaVer
+          const profile = store.get('hx.profile');
+          if (profile) {
+            profile.schemaVer = SCHEMA_VERSION;
+            store.set('hx.profile', profile);
+          }
+        }
+        // 初始化 profiles（创建默认或加载已有）
+        profiles.init();
+        // 更新活跃时间
+        this.touchActive();
+      },
+      _migrateV3toV4() {
+        const oldKeys = ['profile', 'settings', 'progress', 'mastery', 'errorSets', 'errors', 'achievements', 'challenges', 'daily'];
+        const defaultId = 'p_migrated_' + Date.now().toString(36);
+        // 创建 profiles 列表
+        const list = {
+          schemaVer: SCHEMA_VERSION,
+          activeProfileId: defaultId,
+          list: [{
+            id: defaultId, name: '小朋友', avatar: '👦',
+            createdAt: Date.now(), lastActiveAt: Date.now()
+          }]
+        };
+        store.setGlobal('profiles', list);
+        profiles.activeId = defaultId;
+        // 迁移旧数据
+        oldKeys.forEach(k => {
+          const val = store.get(STORAGE_PREFIX + k);
+          if (val !== undefined && val !== null) {
+            store.setForProfile(defaultId, k, val);
+          }
+          store.remove(STORAGE_PREFIX + k);
+        });
+        // 确保不缺失任何 key
+        profiles._initProfileData(defaultId);
+        console.log('[schema] v3→v4 迁移完成，已创建默认孩子档案');
+      },
+      touchActive() {
+        if (!profiles.activeId) return;
+        const p = profiles.get('profile');
+        if (p) {
+          p.lastActiveAt = Date.now();
+          profiles.set('profile', p);
+        }
+      },
+      addActiveTime(ms) {
+        if (!profiles.activeId) return;
+        const p = profiles.get('profile');
+        if (p) {
+          p.totalActiveMs = (p.totalActiveMs || 0) + ms;
+          profiles.set('profile', p);
+        }
+        // 当日时长
+        const daily = profiles.get('daily');
+        const today = utils.formatDate(Date.now());
+        if (!daily.byDate[today]) {
+          daily.byDate[today] = { activeMs: 0, sessions: 0, questions: 0, firstCorrect: 0 };
+        }
+        daily.byDate[today].activeMs += ms;
+        if (!daily.byDate[today]._sessionStarted) {
+          daily.byDate[today].sessions = (daily.byDate[today].sessions || 0) + 1;
+          daily.byDate[today]._sessionStarted = true;
+          setTimeout(() => {
+            const d = profiles.get('daily');
+            if (d.byDate[today]) delete d.byDate[today]._sessionStarted;
+            profiles.set('daily', d);
+          }, 30000);
+        }
+        profiles.set('daily', daily);
+      }
+    };
+
+    /* =================================================================
+     * 模块：profiles（多孩子档案管理）
+     * ================================================================= */
+    const profiles = {
+      activeId: null,
+
+      // 初始化：获取或创建 profiles 列表
+      init() {
+        const list = store.getGlobal('profiles');
+        if (!list || !list.list || list.list.length === 0) {
+          return this._createDefault();
+        }
+        this.activeId = list.activeProfileId || list.list[0].id;
+        return list;
+      },
+
+      // 获取所有 profiles
+      getAll() {
+        return (store.getGlobal('profiles') || { list: [] }).list;
+      },
+
+      // 获取当前活跃 profile
+      getActive() {
+        const list = store.getGlobal('profiles');
+        if (!list || !this.activeId) return null;
+        return list.list.find(p => p.id === this.activeId) || list.list[0] || null;
+      },
+
+      // 创建新孩子
+      create(name, avatar) {
+        const list = store.getGlobal('profiles');
+        if (!list) return null;
+        const id = 'p_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+        const profile = { id, name, avatar: avatar || '👦', createdAt: Date.now(), lastActiveAt: Date.now() };
+        list.list.push(profile);
+        list.activeProfileId = id;
+        this.activeId = id;
+        store.setGlobal('profiles', list);
+        this._initProfileData(id);
+        return profile;
+      },
+
+      // 切换活跃孩子
+      switch(id) {
+        const list = store.getGlobal('profiles');
+        if (!list) return false;
+        const found = list.list.find(p => p.id === id);
+        if (!found) return false;
+        list.activeProfileId = id;
+        this.activeId = id;
+        store.setGlobal('profiles', list);
+        return true;
+      },
+
+      // 删除孩子（需要确认）
+      remove(id) {
+        const list = store.getGlobal('profiles');
+        if (!list || list.list.length <= 1) return false;
+        const idx = list.list.findIndex(p => p.id === id);
+        if (idx === -1) return false;
+        list.list.splice(idx, 1);
+        if (list.activeProfileId === id) {
+          list.activeProfileId = list.list[0].id;
+          this.activeId = list.list[0].id;
+        }
+        store.setGlobal('profiles', list);
+        // 清理该孩子的所有数据
+        Object.keys(localStorage)
+          .filter(k => k.startsWith(STORAGE_PREFIX + id + '.'))
+          .forEach(k => {
+            delete store.cache[k];
+            localStorage.removeItem(k);
+          });
+        return true;
+      },
+
+      // ---- 作用域数据读写 ----
+      get(key, defaultVal) {
+        if (!this.activeId) return defaultVal;
+        return store.getForProfile(this.activeId, key, defaultVal);
+      },
+      set(key, val) {
+        if (!this.activeId) return false;
+        return store.setForProfile(this.activeId, key, val);
+      },
+      remove(key) {
+        if (!this.activeId) return;
+        store.removeForProfile(this.activeId, key);
+      },
+
+      // ---- 只读其它孩子的数据 ----
+      getReadonly(pid, key, defaultVal) {
+        return store.getForProfile(pid, key, defaultVal);
+      },
+
+      // ---- 内部 ----
+      _createDefault() {
+        const id = 'p_default_' + Date.now().toString(36);
+        const list = {
+          schemaVer: SCHEMA_VERSION,
+          activeProfileId: id,
+          list: [{
+            id, name: '小朋友', avatar: '👦',
+            createdAt: Date.now(), lastActiveAt: Date.now()
+          }]
+        };
+        store.setGlobal('profiles', list);
+        this.activeId = id;
+        this._initProfileData(id);
+        return list;
+      },
+
+      _initProfileData(pid) {
+        const defaults = [
+          ['profile', { schemaVer: SCHEMA_VERSION, createdAt: Date.now(), lastActiveAt: Date.now(), totalActiveMs: 0, appVersion: APP_VERSION }],
+          ['settings', { schemaVer: SCHEMA_VERSION, sound: true, motion: true, fontSize: 'normal', timeoutSecByType: { single: 5, double: 10 }, timeoutWarnSec: 3, cooldownMinutes: 5, cooldownThreshold: 5, challengeDurationSec: 60 }],
+          ['progress', { schemaVer: SCHEMA_VERSION, levels: {} }],
+          ['mastery', { schemaVer: SCHEMA_VERSION, byLevel: {} }],
+          ['errorSets', { schemaVer: SCHEMA_VERSION, byLevel: {} }],
+          ['errors', { schemaVer: SCHEMA_VERSION, items: [] }],
+          ['achievements', { schemaVer: SCHEMA_VERSION, unlocked: [], totalUnlocked: 0 }],
+          ['challenges', { schemaVer: SCHEMA_VERSION, byLevel: {} }],
+          ['daily', { schemaVer: SCHEMA_VERSION, byDate: {} }]
+        ];
+        defaults.forEach(([key, val]) => {
+          if (store.getForProfile(pid, key) === undefined) {
+            store.setForProfile(pid, key, val);
+          }
+        });
+      }
+    };
+
+    /* =================================================================
+     * 模块：levels（关卡配置）
+     * ================================================================= */
+    // ============================================================
+    // 12 关卡体系（按教学关键子集全覆盖）
+    // ============================================================
+    // "coverageSet" 为 null 表示覆盖题库所有可能算式（即全覆盖）
+    // 否则列出必须掌握的关键算式列表
+    // ============================================================
+    function generateFullCoverageSet(operators, range, filter) {
+      // 生成某个操作符+范围下的"所有可能算式"列表
+      const set = [];
+      const isAdd = operators.includes('+');
+      const isSub = operators.includes('-');
+
+      if (isAdd && !isSub) {
+        // 纯加法
+        for (let a = range.a[0]; a <= range.a[1]; a++) {
+          for (let b = range.b[0]; b <= range.b[1]; b++) {
+            if (filter?.type === 'carry' && ((a % 10) + (b % 10) < 10)) continue;
+            if (filter?.type === 'noCarry' && ((a % 10) + (b % 10) >= 10)) continue;
+            set.push(`${a}+${b}`);
+          }
+        }
+      } else if (isSub && !isAdd) {
+        // 纯减法
+        for (let a = range.a[0]; a <= range.a[1]; a++) {
+          for (let b = range.b[0]; b <= range.b[1]; b++) {
+            if (a < b) continue;
+            if (filter?.type === 'borrow' && ((a % 10) >= (b % 10))) continue;
+            if (filter?.type === 'noBorrow' && ((a % 10) < (b % 10))) continue;
+            set.push(`${a}-${b}`);
+          }
+        }
+      } else {
+        // 混合
+        for (let a = range.a[0]; a <= range.a[1]; a++) {
+          for (let b = range.b[0]; b <= range.b[1]; b++) {
+            if (isAdd) set.push(`${a}+${b}`);
+            if (isSub && a >= b) set.push(`${a}-${b}`);
+          }
+        }
+      }
+      return set;
+    }
+
+    // 一位数加减关键题（全部可能算式）
+    const singleDigitAddAll = generateFullCoverageSet(['+'], { a: [0, 9], b: [0, 9] });  // 100 题
+    const singleDigitSubAll = generateFullCoverageSet(['-'], { a: [0, 9], b: [0, 9] });  // 55 题
+    const tableMulAll = generateFullCoverageSet(['×'], { a: [1, 9], b: [1, 9] });        // 81 题
+    const tableDivAll = [];  // 1~9 除法，每商 1\~9 × 除数 1\~9 = 81 题
+    for (let q = 1; q <= 9; q++) {
+      for (let b = 1; b <= 9; b++) {
+        tableDivAll.push(`${b * q}÷${b}`);
+      }
+    }
+
+    // 两位数加减：精选关键题（避免题库过大）
+    // 策略：个位 + 个位的所有进位/不退位组合 × 多个十位
+    function generateTwoDigitKeySet(op) {
+      const set = [];
+      // 关键十位数：[10, 20, 30, ..., 90] - 9 种
+      const tens = [10, 20, 30, 40, 50, 60, 70, 80, 90];
+      // 一个个位数 + 个位数 = 100 种组合
+      for (const t of tens) {
+        for (let u1 = 0; u1 <= 9; u1++) {
+          for (let u2 = 0; u2 <= 9; u2++) {
+            const a = t + u1;
+            const b = op === '+' ? u2 : u1;  // 减法：a 的个位是 u1, b 的个位是 u2
+            if (op === '+') {
+              // 十位相同（不进位时），或十位差 1（进位时）
+              set.push(`${a}+${b}`);
+            } else {
+              if (a >= b) {
+                set.push(`${a}-${b}`);
+              }
+            }
+          }
+        }
+      }
+      // 去重并截取合理大小
+      return [...new Set(set)];
+    }
+    // 两位数 + 两位数：选 36 道典型（个位 × 个位的进位/不进位 × 多个十位）
+    const twoDigitAddSet = (() => {
+      const set = new Set();
+      const tens = [11, 23, 35, 47, 58, 69];  // 6 种典型十位
+      for (const a of tens) {
+        for (let u1 = 0; u1 <= 9; u1++) {
+          for (let u2 = 0; u2 <= 9; u2++) {
+            const aa = a + u1;
+            const bb = a + u2;  // 两位数典型：两个数十位相同
+            if (aa <= 99 && bb <= 99) set.add(`${aa}+${bb}`);
+          }
+        }
+      }
+      return [...set];  // ~324 道
+    })();
+    // 两位数 - 两位数：选 36 道典型
+    const twoDigitSubSet = (() => {
+      const set = new Set();
+      const tens = [11, 23, 35, 47, 58, 69];
+      for (const a of tens) {
+        for (let u1 = 0; u1 <= 9; u1++) {
+          for (let u2 = 0; u2 <= 9; u2++) {
+            const aa = a + u1;
+            const bb = a + u2;
+            if (aa > bb) set.add(`${aa}-${bb}`);
+          }
+        }
+      }
+      return [...set];  // ~270 道
+    })();
+
+    const LEVELS = [
+      // ===== 一位数阶段 =====
+      {
+        id: 1, name: '一位数加法', icon: '🍎', desc: '10 以内的加法（全覆盖）',
+        operators: ['+'], range: { a: [0, 9], b: [0, 9] },
+        filter: { type: 'mixed' }, timeoutSec: 5,
+        coverageSet: singleDigitAddAll  // 100 道全覆盖
+      },
+      {
+        id: 2, name: '一位数减法', icon: '🍌', desc: '10 以内的减法（全覆盖）',
+        operators: ['-'], range: { a: [0, 9], b: [0, 9] },
+        filter: { type: 'mixed' }, timeoutSec: 5,
+        coverageSet: singleDigitSubAll  // 55 道全覆盖
+      },
+
+      // ===== 表内乘除法 =====
+      {
+        id: 3, name: '表内乘法', icon: '🎲', desc: '1\~9 乘法表（全覆盖）',
+        operators: ['×'], range: { a: [1, 9], b: [1, 9] },
+        filter: { type: 'mixed' }, timeoutSec: 10,
+        coverageSet: tableMulAll  // 81 道全覆盖
+      },
+      {
+        id: 4, name: '表内除法', icon: '🍰', desc: '表内整除（全覆盖）',
+        operators: ['÷'], range: { a: [1, 81], b: [1, 9] },
+        filter: { type: 'exact' }, timeoutSec: 10,
+        coverageSet: tableDivAll  // 81 道全覆盖
+      },
+
+      // ===== 一位+两位混合 =====
+      {
+        id: 5, name: '两位数加法', icon: '🌳', desc: '100 以内加法（关键题）',
+        operators: ['+'], range: { a: [10, 99], b: [10, 99] },
+        filter: { type: 'mixed' }, timeoutSec: 10,
+        coverageSet: twoDigitAddSet  // ~324 道关键题
+      },
+      {
+        id: 6, name: '两位数减法', icon: '🌲', desc: '100 以内减法（关键题）',
+        operators: ['-'], range: { a: [10, 99], b: [10, 99] },
+        filter: { type: 'mixed' }, timeoutSec: 10,
+        coverageSet: twoDigitSubSet  // ~270 道关键题
+      },
+
+      // ===== 混合 =====
+      {
+        id: 7, name: '一位加减混合', icon: '🎈', desc: '一位数加+减（全覆盖）',
+        operators: ['+', '-'], range: { a: [0, 9], b: [0, 9] },
+        filter: { type: 'mixed' }, timeoutSec: 5,
+        coverageSet: [...singleDigitAddAll, ...singleDigitSubAll]  // 155 道
+      },
+      {
+        id: 8, name: '两位加减混合', icon: '🎉', desc: '两位数加+减（关键题）',
+        operators: ['+', '-'], range: { a: [10, 99], b: [10, 99] },
+        filter: { type: 'mixed' }, timeoutSec: 10,
+        coverageSet: [...twoDigitAddSet, ...twoDigitSubSet]  // ~594 道
+      },
+
+      // ===== 进阶 =====
+      {
+        id: 9, name: '乘加混合', icon: '🚀', desc: '乘法与加法混合',
+        operators: ['+', '×'],
+        weights: { '+': 0.5, '×': 0.5 },
+        filter: { type: 'mixed' }, timeoutSec: 10,
+        coverageSet: null  // null = 随机不要求全覆盖（混合运算无穷尽）
+      },
+      {
+        id: 10, name: '乘减混合', icon: '🚁', desc: '乘法与减法混合',
+        operators: ['-', '×'],
+        weights: { '-': 0.5, '×': 0.5 },
+        filter: { type: 'mixed' }, timeoutSec: 10,
+        coverageSet: null
+      },
+
+      // ===== 综合挑战 =====
+      {
+        id: 11, name: '加减乘混合', icon: '⚡', desc: '加减乘混合',
+        operators: ['+', '-', '×'],
+        weights: { '+': 0.4, '-': 0.4, '×': 0.2 },
+        filter: { type: 'mixed' }, timeoutSec: 10,
+        coverageSet: null
+      },
+      {
+        id: 12, name: '四则综合', icon: '🌟', desc: '加减乘除混合',
+        operators: ['+', '-', '×', '÷'],
+        weights: { '+': 0.3, '-': 0.3, '×': 0.2, '÷': 0.2 },
+        filter: { type: 'mixed' }, timeoutSec: 10,
+        coverageSet: null
+      }
+    ];
+
+    const levels = {
+      getAll() { return LEVELS; },
+      get(id) { return LEVELS.find(l => l.id === id); },
+      isUnlocked(id) {
+        if (id === 1) return true;
+        // 第 N 关需第 N-1 关通过
+        const progress = profiles.get('progress');
+        const prevId = id - 1;
+        return !!(progress.levels[prevId] && progress.levels[prevId].passed);
+      }
+    };
+
+    /* =================================================================
+     * 模块：generator（题库生成器）
+     * ================================================================= */
+    const generator = {};
+
+    function isCarry(a, b) {
+      return (a % 10) + (b % 10) >= 10;
+    }
+    function isBorrow(a, b) {
+      return (a % 10) < (b % 10);
+    }
+
+    generator.genAddition = function(config, op) {
+      for (let i = 0; i < 100; i++) {
+        let a, b;
+        if (op === '+') {
+          a = utils.randInt(config.range.a[0], config.range.a[1]);
+          b = utils.randInt(config.range.b[0], config.range.b[1]);
+        } else {
+          const sub = config.range.add;
+          a = utils.randInt(sub.a[0], sub.a[1]);
+          b = utils.randInt(sub.b[0], sub.b[1]);
+        }
+        if (config.filter?.type === 'carry' && !isCarry(a, b)) continue;
+        if (config.filter?.type === 'noCarry' && isCarry(a, b)) continue;
+        return { a, op: '+', b, answer: a + b, expr: `${a}+${b}` };
+      }
+      // 兜底
+      const a = utils.randInt(config.range.a[0], config.range.a[1]);
+      const b = utils.randInt(config.range.b[0], config.range.b[1]);
+      return { a, op: '+', b, answer: a + b, expr: `${a}+${b}` };
+    };
+
+    generator.genSubtraction = function(config, op) {
+      for (let i = 0; i < 100; i++) {
+        let a, b;
+        if (op === '-') {
+          const sub = config.range.sub || config.range;
+          a = utils.randInt(sub.a[0], sub.a[1]);
+          b = utils.randInt(sub.b[0], sub.b[1]);
+        } else {
+          a = utils.randInt(config.range.a[0], config.range.a[1]);
+          b = utils.randInt(config.range.b[0], config.range.b[1]);
+        }
+        if (a < b) continue;
+        if (config.filter?.type === 'borrow' && !isBorrow(a, b)) continue;
+        if (config.filter?.type === 'noBorrow' && isBorrow(a, b)) continue;
+        return { a, op: '-', b, answer: a - b, expr: `${a}-${b}` };
+      }
+      const a = utils.randInt(20, 99);
+      const b = utils.randInt(1, 9);
+      return { a, op: '-', b: Math.min(a, b), answer: a - b, expr: `${a}-${b}` };
+    };
+
+    generator.genMultiplication = function(config) {
+      for (let i = 0; i < 50; i++) {
+        const a = utils.randInt(1, 9);
+        const b = utils.randInt(1, 9);
+        return { a, op: '×', b, answer: a * b, expr: `${a}×${b}` };
+      }
+      return { a: 2, op: '×', b: 3, answer: 6, expr: '2×3' };
+    };
+
+    generator.genDivision = function(config) {
+      for (let i = 0; i < 100; i++) {
+        const b = utils.randInt(1, 9);
+        const q = utils.randInt(1, 9);
+        const a = b * q;
+        if (a < 1 || a > 81) continue;
+        return { a, op: '÷', b, answer: q, expr: `${a}÷${b}` };
+      }
+      return { a: 6, op: '÷', b: 2, answer: 3, expr: '6÷2' };
+    };
+
+    generator.generateByExpr = function(expr, config) {
+      // 从算式字符串解析（用于错集重出）
+      const m = expr.match(/^(\d+)\s*([+\-×÷])\s*(\d+)$/);
+      if (!m) return generator.generate(config);
+      const a = parseInt(m[1]);
+      const op = m[2];
+      const b = parseInt(m[3]);
+      const answer = op === '+' ? a + b :
+                     op === '-' ? a - b :
+                     op === '×' ? a * b :
+                     Math.floor(a / b);
+      return { a, op, b, answer, expr };
+    };
+
+    generator.generate = function(config) {
+      const op = config.operators.length === 1
+        ? config.operators[0]
+        : utils.pick(config.operators);
+
+      if (op === '+') return generator.genAddition(config, '+');
+      if (op === '-') return generator.genSubtraction(config, '-');
+      if (op === '×') return generator.genMultiplication(config);
+      if (op === '÷') return generator.genDivision(config);
+      return generator.genAddition(config, '+');
+    };
+
+    generator.generateOptions = function(correctAnswer, expr) {
+      const options = new Set([correctAnswer]);
+      const op = expr.match(/([+\-×÷])/)?.[1];
+      const isMulDiv = op === '×' || op === '÷';
+
+      // 多种干扰项生成策略
+      const strategies = [
+        () => correctAnswer + utils.randInt(1, 3),
+        () => correctAnswer - utils.randInt(1, 3),
+        () => correctAnswer + (utils.randFloat() < 0.5 ? 1 : -1) * utils.randInt(2, 5),
+        () => isMulDiv ? correctAnswer + utils.randInt(-3, 3) || correctAnswer + 1 : correctAnswer + 10,
+        () => isMulDiv ? correctAnswer - utils.randInt(-3, 3) || correctAnswer - 1 : correctAnswer - 10,
+        () => correctAnswer + utils.randInt(1, 9),
+        () => correctAnswer - utils.randInt(1, 9),
+      ];
+
+      let attempts = 0;
+      while (options.size < 4 && attempts < 100) {
+        const strat = utils.pick(strategies);
+        const candidate = strat();
+        if (candidate >= 0 && Number.isInteger(candidate) && candidate !== correctAnswer && candidate < 1000) {
+          options.add(candidate);
+        }
+        attempts++;
+      }
+
+      // 如果还不够 4 个，补全
+      let extra = 1;
+      while (options.size < 4) {
+        if (!options.has(correctAnswer + extra) && correctAnswer + extra >= 0) {
+          options.add(correctAnswer + extra);
+        }
+        if (!options.has(correctAnswer - extra) && correctAnswer - extra >= 0) {
+          options.add(correctAnswer - extra);
+        }
+        extra++;
+        if (extra > 100) break;
+      }
+
+      return utils.shuffle([...options]);
+    };
+
+    /* =================================================================
+     * 模块：smartDifficulty（智能难度调节）
+     * ================================================================= */
+    const smartDifficulty = {
+      getOrInit(levelId) {
+        let stats = profiles.get('smartStats');
+        if (!stats) {
+          stats = { schemaVer: SCHEMA_VERSION, byLevel: {} };
+          profiles.set('smartStats', stats);
+        }
+        if (!stats.byLevel[levelId]) {
+          stats.byLevel[levelId] = {
+            recentResults: [],
+            totalAttempts: 0, totalCorrect: 0, totalTimeout: 0,
+            avgResponseMs: 0, accuracyRate: 0,
+            trendDirection: 'stable',
+            dynamicTimeoutMs: null,
+            suggestion: null
+          };
+          profiles.set('smartStats', stats);
+        }
+        return stats.byLevel[levelId];
+      },
+
+      save(stats, levelId) {
+        const data = profiles.get('smartStats');
+        data.byLevel[levelId] = stats;
+        profiles.set('smartStats', data);
+      },
+
+      // 记录答题结果
+      recordAttempt(levelId, correct, responseMs, timeouted) {
+        const stats = this.getOrInit(levelId);
+        stats.totalAttempts++;
+        if (correct) stats.totalCorrect++;
+        if (timeouted) stats.totalTimeout++;
+
+        // 滑动窗口（最多 30 条）
+        stats.recentResults.push({ timestamp: Date.now(), correct, responseMs, timeouted });
+        if (stats.recentResults.length > 30) stats.recentResults.shift();
+
+        this.recalcStats(stats, levelId);
+        this.save(stats, levelId);
+      },
+
+      recalcStats(stats, levelId) {
+        const recent = stats.recentResults;
+        if (recent.length < 5) return;
+
+        const avgMs = Math.round(recent.reduce((s, r) => s + r.responseMs, 0) / recent.length);
+        const accuracy = recent.filter(r => r.correct).length / recent.length;
+
+        stats.avgResponseMs = avgMs;
+        stats.accuracyRate = accuracy;
+
+        // 趋势判断
+        if (recent.length >= 10) {
+          const recent10 = recent.slice(-10);
+          const prev10 = recent.slice(-20, -10);
+          const rAvg = recent10.reduce((s, r) => s + r.responseMs, 0) / 10;
+          const pAvg = prev10.reduce((s, r) => s + r.responseMs, 0) / 10;
+
+          if (rAvg < pAvg * 0.9 && accuracy >= 0.8) {
+            stats.trendDirection = 'improving';
+          } else if (rAvg > pAvg * 1.1 || accuracy < 0.6) {
+            stats.trendDirection = 'declining';
+          } else {
+            stats.trendDirection = 'stable';
+          }
+        }
+
+        // 动态超时
+        const config = levels.get(levelId);
+        const baseTimeout = (config ? config.timeoutSec : 10) * 1000;
+
+        if (accuracy >= 0.9 && (stats.avgResponseMs < baseTimeout * 0.6)) {
+          // 又快又准 → 缩短超时
+          stats.dynamicTimeoutMs = Math.max(3000, Math.round(baseTimeout * 0.75));
+          stats.suggestion = null; // 本就合适
+        } else if (accuracy < 0.6 && stats.totalAttempts >= 10) {
+          // 准确率低 → 放宽超时
+          stats.dynamicTimeoutMs = Math.min(30000, Math.round(baseTimeout * 1.4));
+          stats.suggestion = 'easier';
+        } else if (accuracy >= 0.95 && stats.trendDirection === 'improving' && stats.totalAttempts >= 20) {
+          stats.dynamicTimeoutMs = Math.max(3000, Math.round(baseTimeout * 0.7));
+          stats.suggestion = 'harder';
+        } else {
+          stats.dynamicTimeoutMs = baseTimeout;
+          stats.suggestion = null;
+        }
+      },
+
+      getTimeoutMs(levelId) {
+        const stats = this.getOrInit(levelId);
+        return stats.dynamicTimeoutMs || (levels.get(levelId) ? levels.get(levelId).timeoutSec * 1000 : 10000);
+      },
+
+      getSuggestion(levelId) {
+        const stats = this.getOrInit(levelId);
+        return stats.suggestion;
+      },
+
+      getLabel(levelId) {
+        const stats = this.getOrInit(levelId);
+        const trend = stats.trendDirection;
+        const suggestion = stats.suggestion;
+        if (suggestion === 'easier') return '💪 需要更多练习';
+        if (suggestion === 'harder') return '⚡ 可以挑战更难关卡';
+        if (trend === 'improving') return '📈 进步中！';
+        if (trend === 'declining') return '💪 加油~';
+        return '';
+      }
+    };
+
+    /* =================================================================
+     * 模块：gamification（游戏化激励）
+     * ================================================================= */
+    const gamification = (function() {
+      const XP_EVENTS = {
+        correct: 10,
+        correct_streak_5: 15,
+        correct_streak_10: 30,
+        level_pass: 100,
+        mission_complete: 50,
+        achievement: 30,
+        daily_first: 20
+      };
+
+      const MISSION_TEMPLATES = [
+        { id: 'daily_20', type: 'questions', target: 20, title: '完成 20 题', xpReward: 30 },
+        { id: 'daily_30', type: 'questions', target: 30, title: '完成 30 题', xpReward: 50 },
+        { id: 'daily_streak_5', type: 'streak', target: 5, title: '连续答对 5 题', xpReward: 20 },
+        { id: 'daily_streak_10', type: 'streak', target: 10, title: '连续答对 10 题', xpReward: 40 },
+        { id: 'daily_accuracy_90', type: 'accuracy', target: 90, title: '正确率 90% 以上', xpReward: 30 },
+        { id: 'daily_no_timeout', type: 'no_timeout', target: 10, title: '连续 10 题不超时', xpReward: 25 }
+      ];
+
+      const ACHIEVEMENT_DEFS = [
+        { id: 'first_correct', title: '第一次答对', desc: '回答正确第一道题', icon: '🎯', xpReward: 20 },
+        { id: 'mastery_10', title: '小有所成', desc: '掌握 10 道题', icon: '🌱', xpReward: 30 },
+        { id: 'mastery_50', title: '融会贯通', desc: '掌握 50 道题', icon: '🌿', xpReward: 50 },
+        { id: 'level_1_pass', title: '初出茅庐', desc: '通过第 1 关', icon: '🥉', xpReward: 50 },
+        { id: 'level_3_pass', title: '渐入佳境', desc: '通过第 3 关', icon: '🥈', xpReward: 80 },
+        { id: 'level_6_pass', title: '口算达人', desc: '通过第 6 关', icon: '🥇', xpReward: 100 },
+        { id: 'problems_100', title: '百题挑战', desc: '累计完成 100 题', icon: '💯', xpReward: 80 },
+        { id: 'problems_500', title: '五百题大师', desc: '累计完成 500 题', icon: '🏅', xpReward: 150 },
+        { id: 'all_golden', title: '全关卡王者', desc: '所有 12 关通关', icon: '👑', xpReward: 500 },
+        { id: 'streak_7', title: '一周达人', desc: '连续 7 天练习', icon: '📅', xpReward: 100 },
+        { id: 'streak_30', title: '月度之星', desc: '连续 30 天练习', icon: '🌟', xpReward: 300 },
+        { id: 'combo_10', title: '十连击', desc: '连续答对 10 题', icon: '🔥', xpReward: 60 },
+        { id: 'combo_20', title: '二十连击', desc: '连续答对 20 题', icon: '💥', xpReward: 120 },
+        { id: 'no_error_level', title: '完美通关', desc: '零失误通关一个关卡', icon: '✨', xpReward: 150 },
+        { id: 'speed_demon', title: '闪电手', desc: '平均 2 秒内答题', icon: '⚡', xpReward: 100 }
+      ];
+
+      function calcLevel(totalXp) {
+        return Math.floor(Math.sqrt(totalXp / 100)) + 1;
+      }
+
+      function getStreakCalendar() {
+        let cal = profiles.get('streakCalendar');
+        if (!cal) {
+          cal = { schemaVer: SCHEMA_VERSION, days: {}, currentStreak: 0, longestStreak: 0, lastPracticeDate: null };
+          profiles.set('streakCalendar', cal);
+        }
+        return cal;
+      }
+
+      return {
+        // ---- 连击系统 ----
+        streak: {
+          current: 0,
+          best: 0,
+          lastCorrectTime: 0,
+
+          recordCorrect() {
+            const now = Date.now();
+            if (now - this.lastCorrectTime > 5000 || this.lastCorrectTime === 0) {
+              this.current = 1;
+            } else {
+              this.current++;
+            }
+            this.lastCorrectTime = now;
+            this.best = Math.max(this.best, this.current);
+
+            if (this.current === 5) {
+              ui.toast('🔥 5 连击!', 'success');
+              gamification.xp.add('correct_streak_5', '5连击');
+            }
+            if (this.current === 10) {
+              ui.toast('🔥🔥 10 连击! 太厉害了!', 'success');
+              gamification.xp.add('correct_streak_10', '10连击');
+            }
+            if (this.current > 0 && this.current % 5 === 0) {
+              ui.confetti({ count: 15, colors: ['#FF6B35', '#FFC857'] });
+            }
+            return this.current;
+          },
+
+          recordWrong() {
+            this.current = 0;
+          }
+        },
+
+        // ---- XP/等级 ----
+        xp: {
+          add(eventType, detail) {
+            const amount = XP_EVENTS[eventType];
+            if (!amount) return;
+            let xpData = profiles.get('xp');
+            if (!xpData) {
+              xpData = { totalXp: 0, level: 1, history: [] };
+            }
+            const oldLevel = calcLevel(xpData.totalXp);
+            xpData.totalXp += amount;
+            const newLevel = calcLevel(xpData.totalXp);
+            xpData.history.unshift({ timestamp: Date.now(), amount, eventType, detail });
+            if (xpData.history.length > 50) xpData.history.pop();
+            profiles.set('xp', xpData);
+
+            if (newLevel > oldLevel) {
+              ui.celebrate({ emoji: '🎊', title: `升级! Lv.${newLevel}`, subtitle: '继续加油！' });
+            }
+            return amount;
+          },
+
+          getLevel() {
+            const xpData = profiles.get('xp');
+            if (!xpData) return 1;
+            return calcLevel(xpData.totalXp);
+          },
+
+          getProgress() {
+            const xpData = profiles.get('xp');
+            if (!xpData || !xpData.totalXp) return 0;
+            const level = calcLevel(xpData.totalXp);
+            const levelXp = (level - 1) * (level - 1) * 100;
+            const nextXp = level * level * 100;
+            return (xpData.totalXp - levelXp) / (nextXp - levelXp);
+          }
+        },
+
+        // ---- 每日任务 ----
+        missions: {
+          initDaily() {
+            const today = utils.formatDate(Date.now());
+            let missionsData = profiles.get('missions');
+            if (!missionsData) {
+              missionsData = { schemaVer: SCHEMA_VERSION, today: { date: '', missions: [], allCompleted: false } };
+            }
+            if (missionsData.today.date !== today) {
+              missionsData.today = {
+                date: today,
+                missions: utils.shuffle(MISSION_TEMPLATES).slice(0, 3).map(t => ({
+                  ...t, progress: 0, completed: false
+                })),
+                allCompleted: false,
+                completedAt: null
+              };
+              profiles.set('missions', missionsData);
+            }
+            return missionsData.today;
+          },
+
+          recordProgress(type, amount = 1) {
+            let missionsData = profiles.get('missions');
+            if (!missionsData) {
+              missionsData = { schemaVer: SCHEMA_VERSION, today: { date: '', missions: [], allCompleted: false } };
+              profiles.set('missions', missionsData);
+            }
+            const today = this.initDaily();
+            let changed = false;
+            let allDone = true;
+            today.missions.forEach(m => {
+              if (m.completed) return;
+              if (m.type === type) {
+                m.progress += amount;
+                if (m.progress >= m.target) {
+                  m.completed = true;
+                  gamification.xp.add('mission_complete', m.title);
+                  ui.toast(`🎯 任务完成: ${m.title}! +${m.xpReward}XP`, 'success');
+                  changed = true;
+                }
+              }
+              if (!m.completed) allDone = false;
+            });
+            if (allDone && !today.allCompleted) {
+              today.allCompleted = true;
+              today.completedAt = Date.now();
+              setTimeout(() => ui.celebrate({ emoji: '🏆', title: '今日全部任务完成!' }), 500);
+              changed = true;
+            }
+            if (changed) {
+              missionsData.today = today;
+              profiles.set('missions', missionsData);
+            }
+          }
+        },
+
+        // ---- 成就系统 ----
+        achievements: {
+          check() {
+            const achievementData = profiles.get('achievements');
+            if (!achievementData) return;
+            const progress = profiles.get('progress');
+            const masteryData = profiles.get('mastery');
+            const unlockedIds = new Set(achievementData.unlocked.map(a => a.id));
+
+            // 累计掌握题数
+            let totalMastered = 0;
+            Object.values(masteryData.byLevel).forEach(lv => {
+              totalMastered += (lv.stats?.mastered || 0);
+            });
+
+            const checks = [
+              { id: 'mastery_10', test: () => totalMastered >= 10 },
+              { id: 'mastery_50', test: () => totalMastered >= 50 },
+              { id: 'level_1_pass', test: () => progress.levels[1]?.passed },
+              { id: 'level_3_pass', test: () => progress.levels[3]?.passed },
+              { id: 'level_6_pass', test: () => progress.levels[6]?.passed },
+            ];
+
+            checks.forEach(c => {
+              if (!unlockedIds.has(c.id) && c.test()) {
+                const def = ACHIEVEMENT_DEFS.find(d => d.id === c.id);
+                if (def) {
+                  achievementData.unlocked.push({
+                    id: c.id, title: def.title, desc: def.desc, icon: def.icon,
+                    unlockedAt: Date.now(), seen: false
+                  });
+                  achievementData.totalUnlocked = achievementData.unlocked.length;
+                  gamification.xp.add('achievement', def.title);
+                  ui.toast(`🏅 ${def.icon} ${def.title}`, 'success', 3000);
+                }
+              }
+            });
+            profiles.set('achievements', achievementData);
+          },
+
+          isUnlocked(id) {
+            const ad = profiles.get('achievements');
+            return ad ? ad.unlocked.some(a => a.id === id) : false;
+          },
+
+          getAll() {
+            return ACHIEVEMENT_DEFS;
+          },
+
+          getUnlocked() {
+            const ad = profiles.get('achievements');
+            return ad ? ad.unlocked : [];
+          }
+        },
+
+        // ---- 日历年 ----
+        streakCalendar: {
+          recordPractice(questionsDone = 0) {
+            const xpData = profiles.get('xp');
+            const xpEarned = xpData?.totalXp || 0;
+            const today = utils.formatDate(Date.now());
+            const cal = getStreakCalendar();
+
+            if (cal.lastPracticeDate === today) return; // 当天已记录
+
+            cal.days[today] = { practiced: true, questionsDone, xpEarned };
+            cal.lastPracticeDate = today;
+
+            // 计算连续天数
+            const sorted = Object.keys(cal.days).sort().reverse();
+            let streak = 0;
+            const todayDate = new Date();
+            for (const dayStr of sorted) {
+              const d = new Date(dayStr);
+              const diff = Math.round((todayDate - d) / (1000 * 60 * 60 * 24));
+              if (diff === streak) {
+                streak++;
+              } else if (diff > streak) {
+                break;
+              }
+            }
+            cal.currentStreak = streak;
+            cal.longestStreak = Math.max(cal.longestStreak, streak);
+
+            // 清理 >90 天的数据
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - 90);
+            Object.keys(cal.days).forEach(k => {
+              if (new Date(k) < cutoff) delete cal.days[k];
+            });
+
+            profiles.set('streakCalendar', cal);
+          },
+
+          getCurrentStreak() {
+            return getStreakCalendar().currentStreak || 0;
+          },
+
+          getLongestStreak() {
+            return getStreakCalendar().longestStreak || 0;
+          }
+        }
+      };
+    })();
+
+    /* =================================================================
+     * 模块：mastery（精熟判定 + 错集）
+     * ================================================================= */
+    const mastery = {};
+
+    mastery.getOrInit = function(levelId) {
+      const m = profiles.get('mastery');
+      if (!m.byLevel[levelId]) {
+        m.byLevel[levelId] = {
+          questions: {},
+          stats: { mastered: 0, pending: 0, sessionAttempted: 0 }
+        };
+        profiles.set('mastery', m);
+      }
+      return m.byLevel[levelId];
+    };
+
+    mastery.markError = function(levelId, expr, wrongFirst, reason) {
+      const level = this.getOrInit(levelId);
+      const errorSets = profiles.get('errorSets');
+      if (!errorSets.byLevel[levelId]) errorSets.byLevel[levelId] = [];
+
+      const existing = level.questions[expr];
+      if (existing?.status === 'pending') {
+        existing.errorCount = (existing.errorCount || 0) + 1;
+        existing.attempts = (existing.attempts || 0) + 1;
+        if (reason === 'timeout') {
+          existing.timeoutCount = (existing.timeoutCount || 0) + 1;
+        }
+
+        // 检查冷却
+        const settings = profiles.get('settings');
+        if (existing.errorCount >= settings.cooldownThreshold) {
+          this.enterCooldown(levelId, expr);
+          profiles.set('errorSets', errorSets);
+          return;
+        }
+      } else {
+        // 从 unseen/mastered 变 pending
+        if (existing?.status === 'mastered') {
+          // 已掌握的题错了一次，回到 pending
+          level.stats.mastered = Math.max(0, (level.stats.mastered || 0) - 1);
+        }
+        level.questions[expr] = {
+          status: 'pending',
+          addedToErrorSetAt: Date.now(),
+          errorCount: 1,
+          attempts: 1,
+          timeoutCount: reason === 'timeout' ? 1 : 0,
+          cooldownUntil: null
+        };
+        level.stats.pending = (level.stats.pending || 0) + 1;
+        if (!errorSets.byLevel[levelId].includes(expr)) {
+          errorSets.byLevel[levelId].push(expr);
+        }
+      }
+
+      // 记录到错题本
+      this.recordErrorToHistory(levelId, expr, wrongFirst, reason);
+      profiles.set('mastery', master);
+      profiles.set('errorSets', errorSets);
+    }.bind({ getOrInit: mastery.getOrInit });
+
+    // 重新定义以正确绑定
+    mastery.markError = function(levelId, expr, wrongFirst, reason) {
+      const m = profiles.get('mastery');
+      if (!m.byLevel[levelId]) {
+        m.byLevel[levelId] = {
+          questions: {},
+          stats: { mastered: 0, pending: 0, sessionAttempted: 0 }
+        };
+      }
+      const level = m.byLevel[levelId];
+      const errorSets = profiles.get('errorSets');
+      if (!errorSets.byLevel[levelId]) errorSets.byLevel[levelId] = [];
+
+      const existing = level.questions[expr];
+      if (existing?.status === 'pending') {
+        existing.errorCount = (existing.errorCount || 0) + 1;
+        existing.attempts = (existing.attempts || 0) + 1;
+        if (reason === 'timeout') {
+          existing.timeoutCount = (existing.timeoutCount || 0) + 1;
+        }
+
+        const settings = profiles.get('settings');
+        if (existing.errorCount >= settings.cooldownThreshold) {
+          this.enterCooldown(levelId, expr);
+          profiles.set('mastery', m);
+          profiles.set('errorSets', errorSets);
+          return;
+        }
+      } else {
+        if (existing?.status === 'mastered') {
+          level.stats.mastered = Math.max(0, (level.stats.mastered || 0) - 1);
+        }
+        level.questions[expr] = {
+          status: 'pending',
+          addedToErrorSetAt: Date.now(),
+          errorCount: 1,
+          attempts: 1,
+          timeoutCount: reason === 'timeout' ? 1 : 0,
+          cooldownUntil: null
+        };
+        level.stats.pending = (level.stats.pending || 0) + 1;
+        if (!errorSets.byLevel[levelId].includes(expr)) {
+          errorSets.byLevel[levelId].push(expr);
+        }
+      }
+
+      this.recordErrorToHistory(levelId, expr, wrongFirst, reason);
+      profiles.set('mastery', m);
+      profiles.set('errorSets', errorSets);
+    };
+
+    mastery.markMastered = function(levelId, expr) {
+      const m = profiles.get('mastery');
+      if (!m.byLevel[levelId]) {
+        m.byLevel[levelId] = {
+          questions: {},
+          stats: { mastered: 0, pending: 0, sessionAttempted: 0 }
+        };
+      }
+      const level = m.byLevel[levelId];
+      const errorSets = profiles.get('errorSets');
+      if (errorSets.byLevel[levelId]) {
+        errorSets.byLevel[levelId] = errorSets.byLevel[levelId].filter(e => e !== expr);
+      }
+
+      const existing = level.questions[expr];
+      if (existing?.status === 'pending') {
+        level.stats.pending = Math.max(0, (level.stats.pending || 0) - 1);
+        level.stats.mastered = (level.stats.mastered || 0) + 1;
+        level.questions[expr] = {
+          status: 'mastered',
+          firstCorrectAt: Date.now(),
+          attempts: (existing.attempts || 0) + 1
+        };
+      } else {
+        // 之前 unseen 或 mastered 再次答对
+        if (!existing) {
+          level.stats.mastered = (level.stats.mastered || 0) + 1;
+        }
+        level.questions[expr] = {
+          status: 'mastered',
+          firstCorrectAt: existing?.firstCorrectAt || Date.now(),
+          attempts: (existing?.attempts || 0) + 1
+        };
+      }
+
+      // 错题本标记为已通过
+      this.markErrorAsMastered(levelId, expr);
+
+      profiles.set('mastery', m);
+      profiles.set('errorSets', errorSets);
+
+      // 更新进度
+      this.updateProgress(levelId);
+    };
+
+    mastery.enterCooldown = function(levelId, expr) {
+      const m = profiles.get('mastery');
+      const settings = profiles.get('settings');
+      const q = m.byLevel[levelId]?.questions[expr];
+      if (!q) return;
+
+      q.cooldownUntil = Date.now() + settings.cooldownMinutes * 60 * 1000;
+      q.errorCount = 0;
+      // 临时从错集移除
+      const errorSets = profiles.get('errorSets');
+      if (errorSets.byLevel[levelId]) {
+        errorSets.byLevel[levelId] = errorSets.byLevel[levelId].filter(e => e !== expr);
+      }
+      m.byLevel[levelId].stats.pending = Math.max(0, (m.byLevel[levelId].stats.pending || 0) - 1);
+
+      // 冷却结束后自动重新加入错集
+      setTimeout(() => {
+        const m2 = profiles.get('mastery');
+        const es2 = profiles.get('errorSets');
+        if (!es2.byLevel[levelId]) es2.byLevel[levelId] = [];
+        if (!es2.byLevel[levelId].includes(expr)) {
+          es2.byLevel[levelId].push(expr);
+          m2.byLevel[levelId].stats.pending = (m2.byLevel[levelId].stats.pending || 0) + 1;
+          profiles.set('errorSets', es2);
+          profiles.set('mastery', m2);
+        }
+      }, settings.cooldownMinutes * 60 * 1000);
+
+      profiles.set('mastery', m);
+      profiles.set('errorSets', errorSets);
+    };
+
+    mastery.isInCooldown = function(levelId, expr) {
+      const m = profiles.get('mastery');
+      const q = m.byLevel[levelId]?.questions[expr];
+      if (!q?.cooldownUntil) return false;
+      return Date.now() < q.cooldownUntil;
+    };
+
+    mastery.recordErrorToHistory = function(levelId, expr, wrongFirst, reason) {
+      const errors = profiles.get('errors');
+      const recent = errors.items.find(
+        e => e.expr === expr && !e.removedAt &&
+        (Date.now() - e.recordedAt) < 7 * 24 * 3600 * 1000
+      );
+      if (recent) {
+        recent.hitCount = (recent.hitCount || 0) + 1;
+        if (wrongFirst !== null) recent.wrongFirst = wrongFirst;
+      } else {
+        const q = generator.generateByExpr(expr, levels.get(levelId));
+        errors.items.push({
+          id: `err_${Date.now()}_${utils.randInt(100, 999)}`,
+          levelId, expr, answer: q.answer,
+          wrongFirst: wrongFirst, recordedAt: Date.now(),
+          hitCount: 1, removedAt: null, totalAttempts: 1,
+          timeoutCount: reason === 'timeout' ? 1 : 0
+        });
+      }
+      // 容量控制
+      if (errors.items.length > 200) {
+        errors.items.sort((a, b) => a.recordedAt - b.recordedAt);
+        errors.items = errors.items.slice(errors.items.length - 200);
+      }
+      profiles.set('errors', errors);
+    };
+
+    mastery.markErrorAsMastered = function(levelId, expr) {
+      const errors = profiles.get('errors');
+      const err = errors.items.find(
+        e => e.expr === expr && !e.removedAt && e.levelId === levelId
+      );
+      if (err) {
+        err.removedAt = Date.now();
+        err.totalAttempts = (err.totalAttempts || 0) + 1;
+        profiles.set('errors', errors);
+      }
+    };
+
+    mastery.updateProgress = function(levelId) {
+      const m = profiles.get('mastery');
+      const progress = profiles.get('progress');
+      if (!progress.levels[levelId]) {
+        progress.levels[levelId] = {
+          unlocked: levels.isUnlocked(levelId),
+          passed: false, passedAt: null,
+          totalShown: 0, totalCorrect: 0,
+          firstCorrectRate: 0, currentSession: 0
+        };
+      }
+      const p = progress.levels[levelId];
+      p.totalCorrect = (p.totalCorrect || 0) + 1;
+      p.firstCorrectRate = p.totalShown > 0 ? p.totalCorrect / p.totalShown : 0;
+      profiles.set('progress', progress);
+    };
+
+    mastery.updateShown = function(levelId) {
+      const progress = profiles.get('progress');
+      if (!progress.levels[levelId]) {
+        progress.levels[levelId] = {
+          unlocked: levels.isUnlocked(levelId),
+          passed: false, passedAt: null,
+          totalShown: 0, totalCorrect: 0,
+          firstCorrectRate: 0, currentSession: 0
+        };
+      }
+      progress.levels[levelId].totalShown = (progress.levels[levelId].totalShown || 0) + 1;
+      progress.levels[levelId].currentSession = (progress.levels[levelId].currentSession || 0) + 1;
+      profiles.set('progress', progress);
+    };
+
+    mastery.checkLevelPassed = function(levelId) {
+      const config = LEVELS.find(l => l.id === levelId);
+      const errorSets = profiles.get('errorSets');
+
+      // 条件 1：错集为空
+      const noErrors = !(errorSets.byLevel[levelId] && errorSets.byLevel[levelId].length > 0);
+      if (!noErrors) return false;
+
+      // 条件 2：
+      //   - 如果有关键子集（coverageSet），要求所有子集题目都已掌握
+      //   - 否则（综合关卡，coverageSet = null），按"至少做对 30 道"判定
+      if (config.coverageSet && config.coverageSet.length > 0) {
+        const m = profiles.get('mastery').byLevel[levelId];
+        const allMastered = config.coverageSet.every(
+          expr => m?.questions?.[expr]?.status === 'mastered'
+        );
+        return allMastered;
+      } else {
+        // 综合关卡：至少做对 30 道不同的题
+        const m = profiles.get('mastery').byLevel[levelId];
+        const masteredCount = m?.stats?.mastered || 0;
+        return masteredCount >= 30;
+      }
+    };
+
+    mastery.getTotalRequired = function(levelId) {
+      // 返回关卡的"目标总数"（用于进度显示）
+      const config = LEVELS.find(l => l.id === levelId);
+      if (config.coverageSet && config.coverageSet.length > 0) {
+        return config.coverageSet.length;
+      }
+      return 30;  // 综合关卡默认 30 道
+    };
+
+    mastery.getMasteredInCoverage = function(levelId) {
+      // 返回覆盖子集中已掌握的题数
+      const config = LEVELS.find(l => l.id === levelId);
+      if (!config.coverageSet) {
+        const m = profiles.get('mastery').byLevel[levelId];
+        return m?.stats?.mastered || 0;
+      }
+      const m = profiles.get('mastery').byLevel[levelId];
+      if (!m?.questions) return 0;
+      return config.coverageSet.filter(
+        expr => m.questions[expr]?.status === 'mastered'
+      ).length;
+    };
+
+    mastery.markLevelPassed = function(levelId) {
+      const progress = profiles.get('progress');
+      if (!progress.levels[levelId]) {
+        progress.levels[levelId] = {
+          unlocked: true, passed: false, passedAt: null,
+          totalShown: 0, totalCorrect: 0, firstCorrectRate: 0
+        };
+      }
+      progress.levels[levelId].passed = true;
+      progress.levels[levelId].passedAt = Date.now();
+      // 解锁下一关
+      if (progress.levels[levelId + 1]) {
+        progress.levels[levelId + 1].unlocked = true;
+      }
+      profiles.set('progress', progress);
+    };
+
+    mastery.resetLevel = function(levelId) {
+      const m = profiles.get('mastery');
+      delete m.byLevel[levelId];
+      const errorSets = profiles.get('errorSets');
+      delete errorSets.byLevel[levelId];
+      const progress = profiles.get('progress');
+      if (progress.levels[levelId]) {
+        progress.levels[levelId] = {
+          unlocked: levels.isUnlocked(levelId),
+          passed: false, passedAt: null,
+          totalShown: 0, totalCorrect: 0, firstCorrectRate: 0
+        };
+        // 锁住后续关卡
+        for (let i = levelId + 1; i <= LEVELS.length; i++) {
+          if (progress.levels[i]) {
+            progress.levels[i].unlocked = false;
+            progress.levels[i].passed = false;
+          }
+        }
+      }
+      profiles.set('mastery', m);
+      profiles.set('errorSets', errorSets);
+      profiles.set('progress', progress);
+    };
+
+    /* =================================================================
+     * 模块：state（应用状态）
+     * ================================================================= */
+    const state = {
+      current: {},
+      training: {
+        levelId: null,
+        currentQuestion: null,
+        currentOptions: [],
+        firstClick: null,
+        wrongClicks: new Set(),
+        locked: false,
+        timeoutTimer: null,
+        timeoutStartTime: 0,
+        timeoutRAF: null,
+        sessionStart: 0
+      },
+      listeners: [],
+      subscribe(fn) { this.listeners.push(fn); },
+      emit() { this.listeners.forEach(fn => fn(this.current)); }
+    };
+
+    /* =================================================================
+     * 模块：router（简单 hash 路由）
+     * ================================================================= */
+    const router = {
+      current: 'home',
+      routes: {},
+      register(name, fn) { this.routes[name] = fn; },
+      go(name) {
+        this.current = name;
+        // 隐藏所有页面
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        const page = document.getElementById(`page-${name}`);
+        if (page) page.classList.add('active');
+        if (this.routes[name]) this.routes[name]();
+        window.scrollTo(0, 0);
+      }
+    };
+
+    /* =================================================================
+     * 模块：ui（通用 UI 组件）
+     * ================================================================= */
+    const ui = {};
+
+    ui.toast = function(message, type = 'info', duration = 1500) {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.textContent = message;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.3s';
+        setTimeout(() => el.remove(), 300);
+      }, duration);
+    };
+
+    ui.confirm = function({ title, body, confirmText = '确定', cancelText = '取消', danger = false, requirePhrase = null }) {
+      return new Promise((resolve) => {
+        const backdrop = document.getElementById('modal-backdrop');
+        const modal = document.getElementById('modal');
+        modal.innerHTML = `
+          <div class="modal-title">${utils.escapeHtml(title)}</div>
+          <div class="modal-body">${utils.escapeHtml(body)}</div>
+          ${requirePhrase ? `<input type="text" class="modal-input" id="modal-phrase" placeholder="请输入「${utils.escapeHtml(requirePhrase)}」以确认">` : ''}
+          <div class="modal-actions">
+            <button class="modal-btn ghost" id="modal-cancel">${utils.escapeHtml(cancelText)}</button>
+            <button class="modal-btn ${danger ? 'danger' : 'primary'}" id="modal-confirm">${utils.escapeHtml(confirmText)}</button>
+          </div>
+        `;
+        backdrop.classList.add('show');
+
+        const close = (result) => {
+          backdrop.classList.remove('show');
+          modal.innerHTML = '';
+          resolve(result);
+        };
+
+        document.getElementById('modal-cancel').onclick = () => close(false);
+        document.getElementById('modal-confirm').onclick = () => {
+          if (requirePhrase) {
+            const input = document.getElementById('modal-phrase');
+            if (input.value !== requirePhrase) {
+              ui.toast('输入不正确', 'error');
+              return;
+            }
+          }
+          close(true);
+        };
+      });
+    };
+
+    ui.celebrate = function({ emoji = '🎉', title, subtitle, onDismiss }) {
+      const el = document.getElementById('celebration');
+      document.getElementById('celebration-emoji').textContent = emoji;
+      document.getElementById('celebration-title').textContent = title;
+      document.getElementById('celebration-subtitle').textContent = subtitle || '';
+      el.classList.add('show');
+      document.getElementById('celebration-btn').onclick = () => {
+        el.classList.remove('show');
+        if (onDismiss) onDismiss();
+      };
+      // 撒花
+      ui.confetti();
+    };
+
+    ui.confetti = function() {
+      const container = document.getElementById('confetti');
+      const colors = ['#FFC857', '#7BD389', '#5BA8E0', '#FF9AA2', '#C8A8E9'];
+      for (let i = 0; i < 50; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti';
+        piece.style.left = utils.randFloat() * 100 + '%';
+        piece.style.background = utils.pick(colors);
+        piece.style.animationDelay = utils.randFloat() * 0.5 + 's';
+        piece.style.animationDuration = (1.5 + utils.randFloat()) + 's';
+        container.appendChild(piece);
+        setTimeout(() => piece.remove(), 3000);
+      }
+    };
+
+    /* =================================================================
+     * 模块：audio（WebAudio 合成）
+     * ================================================================= */
+    const audio = {
+      ctx: null,
+      enabled: true,
+      init() {
+        if (this.ctx) return;
+        try {
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+          this.enabled = false;
+        }
+      },
+      play(notes, options = {}) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+        const { volume = 0.15, type = 'sine' } = options;
+        const now = this.ctx.currentTime;
+        notes.forEach(([freq, start, dur], i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0, now + start);
+          gain.gain.linearRampToValueAtTime(volume, now + start + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + start + dur);
+          osc.connect(gain).connect(this.ctx.destination);
+          osc.start(now + start);
+          osc.stop(now + start + dur);
+        });
+      },
+      correct() {
+        this.play([[523.25, 0, 0.12], [659.25, 0.08, 0.12], [783.99, 0.16, 0.2]]);
+      },
+      wrong() {
+        this.play([[261.63, 0, 0.15]], { type: 'triangle' });
+      },
+      pass() {
+        this.play([
+          [523.25, 0, 0.15], [659.25, 0.12, 0.15],
+          [783.99, 0.24, 0.15], [1046.5, 0.36, 0.4]
+        ]);
+      },
+      timeout() {
+        this.play([[220, 0, 0.2]], { type: 'triangle' });
+      }
+    };
+
+    /* =================================================================
+     * 模块：reports（家长看板报表 / 图表）
+     * ================================================================= */
+    const reports = {
+      // 弱项分析（按运算符统计掌握率）
+      weakPointAnalysis(pid) {
+        const masteryData = profiles.getReadonly(pid, 'mastery');
+        const progress = profiles.getReadonly(pid, 'progress');
+        const ops = { '+': { total: 0, mastered: 0 }, '-': { total: 0, mastered: 0 },
+                      '×': { total: 0, mastered: 0 }, '÷': { total: 0, mastered: 0 } };
+
+        levels.getAll().forEach(lv => {
+          const levelData = masteryData?.byLevel[lv.id];
+          if (!levelData?.questions) return;
+          Object.entries(levelData.questions).forEach(([expr, q]) => {
+            const op = expr.match(/[+\-×÷]/)?.[0];
+            if (!op || !ops[op]) return;
+            ops[op].total++;
+            if (q.status === 'mastered') ops[op].mastered++;
+          });
+        });
+        return Object.entries(ops).map(([op, data]) => ({
+          op, total: data.total, mastered: data.mastered,
+          rate: data.total > 0 ? (data.mastered / data.total * 100) : 0
+        })).sort((a, b) => a.rate - b.rate);
+      },
+
+      // 周/月报告
+      generatePeriodReport(pid, days = 7) {
+        const dailyData = profiles.getReadonly(pid, 'daily');
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        let totalQuestions = 0, totalCorrect = 0, totalSessions = 0, totalMs = 0;
+        let practiceDays = 0;
+
+        Object.entries(dailyData?.byDate || {}).forEach(([date, data]) => {
+          if (new Date(date) >= cutoff && data.questions > 0) {
+            totalQuestions += data.questions || 0;
+            totalSessions += data.sessions || 0;
+            totalMs += data.activeMs || 0;
+            practiceDays++;
+          }
+        });
+        return {
+          period: `${days}天`, practiceDays, totalSessions,
+          totalMs, totalQuestions,
+          avgPerDay: practiceDays > 0 ? Math.round(totalQuestions / practiceDays) : 0
+        };
+      },
+
+      // 准确率趋势
+      getAccuracyTrend(pid, days = 30) {
+        const dailyData = profiles.getReadonly(pid, 'daily');
+        const trend = [];
+        for (let i = days - 1; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          const key = utils.formatDate(d.getTime());
+          const data = dailyData?.byDate?.[key];
+          trend.push({
+            date: key,
+            accuracy: data && data.questions > 0 ? Math.round(data.firstCorrect / data.questions * 100) : null,
+            questions: data?.questions || 0
+          });
+        }
+        return trend;
+      },
+
+      // SVG 折线图
+      renderChart(trendData, containerId) {
+        const width = 600, height = 200, pad = { top: 15, right: 15, bottom: 25, left: 40 };
+        const plotW = width - pad.left - pad.right;
+        const plotH = height - pad.top - pad.bottom;
+        const validData = trendData.filter(d => d.accuracy !== null);
+        if (validData.length === 0) return;
+
+        let svg = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">`;
+
+        // 网格线
+        for (let i = 0; i <= 4; i++) {
+          const y = pad.top + (plotH * (1 - i / 4));
+          svg += `<line x1="${pad.left}" y1="${y}" x2="${width - pad.right}" y2="${y}" stroke="#E8E2D5" stroke-width="1"/>`;
+          svg += `<text x="${pad.left - 6}" y="${y + 4}" text-anchor="end" font-size="11" fill="#7F8C8D">${i * 25}%</text>`;
+        }
+
+        // 折线
+        const points = validData.map((d, i) => {
+          const x = pad.left + (i / Math.max(validData.length - 1, 1)) * plotW;
+          const y = pad.top + plotH * (1 - (d.accuracy || 0) / 100);
+          return `${x},${y}`;
+        }).join(' ');
+        svg += `<polyline points="${points}" fill="none" stroke="#5BA8E0" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+
+        // 面积
+        const areaPts = [`${pad.left},${pad.top + plotH}`, points, `${pad.left + plotW},${pad.top + plotH}`].join(' ');
+        svg += `<polygon points="${areaPts}" fill="#5BA8E0" opacity="0.1"/>`;
+
+        // 数据点
+        validData.forEach((d, i) => {
+          const x = pad.left + (i / Math.max(validData.length - 1, 1)) * plotW;
+          const y = pad.top + plotH * (1 - (d.accuracy || 0) / 100);
+          svg += `<circle cx="${x}" cy="${y}" r="3" fill="#5BA8E0"/>`;
+        });
+
+        // X 轴标签（每 5 天显示一个）
+        trendData.forEach((d, i) => {
+          if (i % 5 === 0 || i === trendData.length - 1) {
+            const x = pad.left + (i / Math.max(trendData.length - 1, 1)) * plotW;
+            svg += `<text x="${x}" y="${height - 5}" text-anchor="middle" font-size="9" fill="#7F8C8D">${d.date.slice(5)}</text>`;
+          }
+        });
+        svg += '</svg>';
+
+        const container = document.getElementById(containerId);
+        if (container) container.innerHTML = svg;
+      },
+
+      // 弱项柱状图 (SVG)
+      renderWeakChart(data, containerId) {
+        const width = 300, height = 150, pad = { top: 10, right: 10, bottom: 25, left: 35 };
+        const plotW = width - pad.left - pad.right;
+        const plotH = height - pad.top - pad.bottom;
+        const barW = plotW / data.length - 10;
+
+        let svg = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">`;
+
+        data.forEach((d, i) => {
+          const x = pad.left + (i * (plotW / data.length)) + 5;
+          const barH = (d.rate / 100) * plotH;
+          const y = pad.top + plotH - barH;
+          const color = d.rate >= 80 ? '#7BD389' : d.rate >= 50 ? '#FFC857' : '#FF9AA2';
+          svg += `<rect x="${x}" y="${y}" width="${Math.max(barW, 10)}" height="${Math.max(barH, 2)}" rx="3" fill="${color}"/>`;
+          svg += `<text x="${x + barW / 2}" y="${pad.top + plotH + 14}" text-anchor="middle" font-size="11" fill="#7F8C8D">${d.op}</text>`;
+          svg += `<text x="${x + barW / 2}" y="${y - 4}" text-anchor="middle" font-size="10" fill="${color}">${Math.round(d.rate)}%</text>`;
+        });
+        svg += '</svg>';
+
+        const container = document.getElementById(containerId);
+        if (container) container.innerHTML = svg;
+      }
+    };
+
+    /* =================================================================
+     * 模块：pages - home
+     * ================================================================= */
+    const pages = {};
+
+    pages.home = function() {
+      const progress = profiles.get('progress');
+      const errorSets = profiles.get('errorSets');
+      const allLevels = levels.getAll();
+      let totalPending = 0;
+      Object.values(errorSets.byLevel).forEach(arr => {
+        totalPending += (arr || []).length;
+      });
+
+      const content = document.getElementById('home-content');
+      const xpLevel = gamification.xp.getLevel();
+      const xpProgress = gamification.xp.getProgress();
+      const streak = gamification.streakCalendar.getCurrentStreak();
+
+      let html = `
+        <div class="home-header">
+          <div class="home-title">🌟 口算小达人 🌟</div>
+          <div class="home-subtitle">加油，继续！</div>
+        </div>
+      `;
+
+      // XP + Streak 概览
+      html += `
+        <div style="display:flex;gap:var(--space-sm);margin-bottom:var(--space-md)">
+          <div style="flex:1;background:var(--color-bg-card);border-radius:var(--radius-md);padding:var(--space-sm) var(--space-md);box-shadow:var(--shadow-sm)">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--color-text-sub);margin-bottom:4px">
+              <span>Lv.${xpLevel}</span>
+              <span>${Math.round(xpProgress * 100)}%</span>
+            </div>
+            <div style="height:6px;background:var(--color-border);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${xpProgress * 100}%;background:linear-gradient(90deg,var(--color-mint),var(--color-primary));border-radius:3px;transition:width 0.3s"></div>
+            </div>
+          </div>
+          <div style="background:var(--color-bg-card);border-radius:var(--radius-md);padding:var(--space-sm) var(--space-md);box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:var(--space-xs)">
+            <span style="font-size:20px">${streak > 0 ? '🔥' : '📅'}</span>
+            <div>
+              <div style="font-size:18px;font-weight:700">${streak}</div>
+              <div style="font-size:11px;color:var(--color-text-sub)">天连续</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // 每日任务进度
+      const missionsData = gamification.missions.initDaily();
+      if (missionsData && missionsData.missions.length > 0) {
+        html += `<div style="background:var(--color-bg-card);border-radius:var(--radius-md);padding:var(--space-sm) var(--space-md);margin-bottom:var(--space-md);box-shadow:var(--shadow-sm)">`;
+        html += `<div style="font-size:13px;font-weight:600;margin-bottom:var(--space-xs)">📋 今日任务</div>`;
+        missionsData.missions.forEach(m => {
+          const pct = Math.min(100, (m.progress / m.target) * 100);
+          html += `
+            <div style="display:flex;align-items:center;gap:var(--space-xs);margin-bottom:4px;font-size:12px">
+              <span style="${m.completed ? 'color:var(--color-success)' : ''}">${m.completed ? '✅' : '⬜'}</span>
+              <span style="flex:1">${m.title}</span>
+              <span style="color:var(--color-text-sub)">${Math.min(m.progress, m.target)}/${m.target}</span>
+            </div>
+            <div style="height:4px;background:var(--color-border);border-radius:2px;overflow:hidden;margin-bottom:6px">
+              <div style="height:100%;width:${pct}%;background:${m.completed ? 'var(--color-success)' : 'var(--color-primary)'};border-radius:2px"></div>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+
+      // 待掌握快捷入口
+      if (totalPending > 0) {
+        html += `
+          <div class="errors-shortcut">
+            <div class="errors-shortcut-icon">📒</div>
+            <div class="errors-shortcut-body">
+              <div class="errors-shortcut-title">待掌握 ${totalPending} 道</div>
+              <div class="errors-shortcut-desc">错题会在练习中自动重出</div>
+            </div>
+            <button class="errors-shortcut-btn" id="goto-errors">查看</button>
+          </div>
+        `;
+      }
+
+      html += `<div class="level-grid">`;
+      allLevels.forEach(level => {
+        const lvProgress = progress.levels[level.id] || { unlocked: level.id === 1, passed: false };
+        const unlocked = lvProgress.unlocked !== false;
+        const passed = !!lvProgress.passed;
+        const stats = (profiles.get('mastery').byLevel[level.id] || { stats: { mastered: 0, pending: 0 } }).stats;
+        const errorCount = (errorSets.byLevel[level.id] || []).length;
+
+        html += `
+          <div class="level-card ${unlocked ? '' : 'locked'} ${passed ? 'passed' : ''}"
+               data-level="${level.id}" style="${unlocked ? 'cursor:pointer' : 'cursor:not-allowed'}">
+            <div class="level-card-header">
+              <div class="level-icon">${unlocked ? level.icon : '🔒'}</div>
+              <div class="level-name">第 ${level.id} 关 · ${utils.escapeHtml(level.name)}</div>
+              <div class="level-status ${passed ? 'passed' : ''}">${passed ? '✓ 已通过' : (unlocked ? '进行中' : '未解锁')}</div>
+            </div>
+            <div class="level-desc">${utils.escapeHtml(level.desc)}</div>
+            ${unlocked ? `
+              <div class="level-stats">
+                <span>已掌握 ${stats.mastered} 道</span>
+                ${errorCount > 0 ? `<span class="pending">待掌握 ${errorCount} 道</span>` : ''}
+              </div>
+              ${passed ? '' : `
+                <div class="level-progress">
+                  <div class="level-progress-bar" style="width:${Math.min(100, stats.mastered * 5)}%"></div>
+                </div>
+              `}
+            ` : ''}
+          </div>
+        `;
+      });
+      html += `</div>`;
+
+      // 缩略图（小屏优化）
+      html += `<div style="margin-bottom:80px"></div>`;
+      content.innerHTML = html;
+
+      // 绑定点击
+      content.querySelectorAll('.level-card').forEach(card => {
+        card.onclick = () => {
+          const id = parseInt(card.dataset.level);
+          if (!levels.isUnlocked(id)) {
+            ui.toast('请先通关前一关', 'warn');
+            return;
+          }
+          pages.training(id);
+        };
+      });
+      const btn = document.getElementById('goto-errors');
+      if (btn) btn.onclick = () => pages.errors();
+    };
+
+    /* =================================================================
+     * 模块：pages - training
+     * ================================================================= */
+    pages.training = function(levelId) {
+      router.go('training');
+      const config = levels.get(levelId);
+      document.getElementById('training-title').textContent = `第 ${config.id} 关 · ${config.name}`;
+
+      // 重置训练状态
+      const t = state.training;
+      t.levelId = levelId;
+      t.firstClick = null;
+      t.wrongClicks = new Set();
+      t.locked = false;
+      t.sessionStart = Date.now();
+
+      // 渲染底部关卡栏
+      renderTrainingBottombar();
+      // 显示第一题
+      showNextQuestion();
+    };
+
+    function renderTrainingBottombar() {
+      const allLevels = levels.getAll();
+      const progress = profiles.get('progress');
+      const container = document.getElementById('training-bottombar');
+      container.innerHTML = allLevels.map(lv => {
+        const p = progress.levels[lv.id] || {};
+        const unlocked = levels.isUnlocked(lv.id);
+        const active = lv.id === state.training.levelId;
+        const passed = !!p.passed;
+        return `
+          <button class="level-btn ${unlocked ? '' : 'locked'} ${active ? 'active' : ''} ${passed ? 'passed' : ''}"
+                  data-level="${lv.id}">
+            <div class="level-btn-icon">${unlocked ? lv.icon : '🔒'}</div>
+            <div>第${lv.id}关</div>
+          </button>
+        `;
+      }).join('');
+      container.querySelectorAll('.level-btn').forEach(btn => {
+        btn.onclick = () => {
+          const id = parseInt(btn.dataset.level);
+          if (!levels.isUnlocked(id)) {
+            ui.toast('请先通关前一关', 'warn');
+            return;
+          }
+          clearTrainingTimeout();
+          pages.training(id);
+        };
+      });
+    }
+
+    function showNextQuestion() {
+      const levelId = state.training.levelId;
+      const config = levels.get(levelId);
+      const masteryData = profiles.get('mastery').byLevel[levelId] || { questions: {}, stats: { mastered: 0, pending: 0 } };
+      const errorSet = (profiles.get('errorSets').byLevel[levelId] || []).filter(
+        e => !mastery.isInCooldown(levelId, e)
+      );
+
+      // 优先级 1：错集
+      let question;
+      if (errorSet.length > 0) {
+        const expr = utils.pick(errorSet);
+        question = generator.generateByExpr(expr, config);
+      } else {
+        // 优先级 2：随机新题
+        question = generator.generate(config);
+      }
+
+      // 记录已出题
+      mastery.updateShown(levelId);
+
+      // 渲染
+      const options = generator.generateOptions(question.answer, question.expr);
+      state.training.currentQuestion = question;
+      state.training.currentOptions = options;
+      state.training.firstClick = null;
+      state.training.wrongClicks = new Set();
+      state.training.locked = false;
+
+      document.getElementById('expr-text').textContent = utils.formatExprForDisplay(question.expr) + ' = ?';
+      renderOptions(options, new Set());
+      updateProgressDisplay();
+      startTimeout(question);
+    }
+
+    function renderOptions(options, wrongClicks) {
+      const grid = document.getElementById('options-grid');
+      grid.innerHTML = options.map((opt, i) => {
+        const isWrong = wrongClicks.has(i);
+        const cls = isWrong ? 'eliminated' : '';
+        return `<button class="option ${cls}" data-idx="${i}" data-value="${opt}">${opt}</button>`;
+      }).join('');
+      grid.querySelectorAll('.option').forEach(btn => {
+        btn.onclick = () => onOptionClick(parseInt(btn.dataset.idx), parseInt(btn.dataset.value));
+      });
+    }
+
+    function onOptionClick(idx, value) {
+      const t = state.training;
+      if (t.locked) return;
+
+      const question = t.currentQuestion;
+      const correct = value === question.answer;
+
+      if (t.firstClick === null) {
+        // 首次点击
+        t.firstClick = idx;
+        if (correct) {
+          handleCorrect(question);
+        } else {
+          t.wrongClicks.add(idx);
+          handleWrongFirst(question, value);
+        }
+      } else {
+        // 后续点击（错误重选）
+        if (correct) {
+          // 重选对了
+          handleCorrectAfterWrong(question, value);
+        } else {
+          t.wrongClicks.add(idx);
+          // 标记新错误选项
+          renderOptions(t.currentOptions, t.wrongClicks);
+          // 抖动该选项
+          const btn = document.querySelector(`.option[data-idx="${idx}"]`);
+          if (btn) {
+            btn.classList.add('wrong');
+            setTimeout(() => btn.classList.remove('wrong'), 400);
+          }
+          audio.wrong();
+        }
+      }
+    }
+
+    function handleCorrect(question) {
+      const t = state.training;
+      t.locked = true;
+      clearTrainingTimeout();
+
+      // 记录智能难度数据
+      const responseMs = Math.round(performance.now() - t.timeoutStartTime);
+      smartDifficulty.recordAttempt(t.levelId, true, responseMs, false);
+
+      // 标记掌握
+      mastery.markMastered(t.levelId, question.expr);
+
+      // 游戏化：连击 + XP + 任务 + 日历
+      gamification.streak.recordCorrect();
+      gamification.xp.add('correct', question.expr);
+      gamification.missions.recordProgress('questions');
+      gamification.missions.recordProgress('streak');
+      gamification.streakCalendar.recordPractice();
+
+      // UI 反馈
+      const btn = document.querySelector(`.option[data-idx="${t.firstClick}"]`);
+      if (btn) {
+        btn.classList.add('correct');
+      }
+      audio.correct();
+      ui.toast(question.firstTime ? '你掌握啦！' : '太棒了！', 'success', 800);
+
+      updateProgressDisplay();
+
+      // 检查通关
+      if (mastery.checkLevelPassed(t.levelId)) {
+        // 已通关
+        setTimeout(() => {
+          if (!profiles.get('progress').levels[t.levelId]?.passed) {
+            handleLevelPassed(t.levelId);
+          } else {
+            // 之前已通关，回退练习
+            setTimeout(() => showNextQuestion(), 800);
+          }
+        }, 800);
+      } else {
+        setTimeout(() => showNextQuestion(), 800);
+      }
+    }
+
+    function handleWrongFirst(question, wrongValue) {
+      const t = state.training;
+      // 记录智能难度数据
+      const responseMs = Math.round(performance.now() - t.timeoutStartTime);
+      smartDifficulty.recordAttempt(t.levelId, false, responseMs, false);
+      // 重置连击
+      gamification.streak.recordWrong();
+      // 标记错误
+      mastery.markError(t.levelId, question.expr, wrongValue, 'click');
+
+      // UI 反馈
+      const btn = document.querySelector(`.option[data-idx="${t.firstClick}"]`);
+      if (btn) {
+        btn.classList.add('wrong');
+        setTimeout(() => btn.classList.remove('wrong'), 400);
+      }
+      audio.wrong();
+      ui.toast('再看看哦~', 'error', 1000);
+      updateProgressDisplay();
+
+      // 重新渲染，标记已错误选项
+      renderOptions(t.currentOptions, t.wrongClicks);
+    }
+
+    function handleCorrectAfterWrong(question, value) {
+      const t = state.training;
+      t.locked = true;
+      clearTrainingTimeout();
+
+      // 标记掌握
+      mastery.markMastered(t.levelId, question.expr);
+
+      // UI 反馈
+      const correctIdx = t.currentOptions.indexOf(value);
+      const btn = document.querySelector(`.option[data-idx="${correctIdx}"]`);
+      if (btn) {
+        btn.classList.add('correct');
+      }
+      audio.correct();
+      ui.toast('你掌握啦！', 'success', 800);
+
+      updateProgressDisplay();
+
+      if (mastery.checkLevelPassed(t.levelId)) {
+        setTimeout(() => {
+          if (!profiles.get('progress').levels[t.levelId]?.passed) {
+            handleLevelPassed(t.levelId);
+          } else {
+            setTimeout(() => showNextQuestion(), 800);
+          }
+        }, 800);
+      } else {
+        setTimeout(() => showNextQuestion(), 800);
+      }
+    }
+
+    function handleLevelPassed(levelId) {
+      mastery.markLevelPassed(levelId);
+      gamification.xp.add('level_pass', `第${levelId}关`);
+      gamification.missions.recordProgress('level_first_pass');
+      const config = levels.get(levelId);
+      const nextLevel = levels.get(levelId + 1);
+      let subtitle = '🎊';
+      if (nextLevel && levels.isUnlocked(levelId + 1)) {
+        subtitle = `已解锁：${nextLevel.icon} ${nextLevel.name}`;
+      } else if (levelId === 12) {
+        subtitle = '🎉 全部关卡通关！';
+      }
+      audio.pass();
+      ui.celebrate({
+        emoji: '🎉',
+        title: `第 ${levelId} 关通关！`,
+        subtitle: subtitle,
+        onDismiss: () => {
+          renderTrainingBottombar();
+          // 检查是否全部通关
+          if (levelId === 12) {
+            router.go('home');
+            pages.home();
+          } else {
+            // 继续练习或回退
+            showNextQuestion();
+          }
+        }
+      });
+    }
+
+    function updateProgressDisplay() {
+      const levelId = state.training.levelId;
+      const stats = (profiles.get('mastery').byLevel[levelId] || { stats: { mastered: 0, pending: 0 } }).stats;
+      const errorCount = (profiles.get('errorSets').byLevel[levelId] || []).length;
+      const totalRequired = mastery.getTotalRequired(levelId);
+      const masteredInCoverage = mastery.getMasteredInCoverage(levelId);
+      document.getElementById('progress-label').textContent = `已掌握 ${masteredInCoverage} / ${totalRequired} 道`;
+      document.getElementById('progress-pending').textContent = `待掌握 ${errorCount} 道`;
+      // 进度条
+      const percent = Math.min(100, (masteredInCoverage / totalRequired) * 100);
+      document.getElementById('progress-fill').style.width = percent + '%';
+      // 智能难度提示
+      const labelEl = document.getElementById('difficulty-label');
+      if (labelEl) {
+        const label = smartDifficulty.getLabel(levelId);
+        labelEl.textContent = label || '';
+        labelEl.style.display = label ? 'inline' : 'none';
+      }
+    }
+
+    /* =================================================================
+     * 模块：超时判定
+     * ================================================================= */
+    function startTimeout(question) {
+      const t = state.training;
+      const config = levels.get(t.levelId);
+      const settings = profiles.get('settings');
+      const totalMs = smartDifficulty.getTimeoutMs(t.levelId);
+      const warnMs = Math.max(0, totalMs - settings.timeoutWarnSec * 1000);
+
+      t.timeoutStartTime = performance.now();
+      t.timeoutTimer = setTimeout(() => {
+        handleTimeout();
+      }, totalMs);
+
+      // 倒计时进度条动画
+      const fill = document.getElementById('timeout-fill');
+      fill.style.transition = 'none';
+      fill.style.width = '100%';
+      // 强制 reflow
+      fill.offsetHeight;
+      fill.style.transition = `width ${totalMs}ms linear`;
+
+      // 警告闪烁
+      setTimeout(() => {
+        fill.classList.add('warn');
+        // 选项也闪烁
+        document.querySelectorAll('.option').forEach(opt => {
+          opt.classList.add('timeout-warn');
+        });
+      }, warnMs);
+    }
+
+    function clearTrainingTimeout() {
+      const t = state.training;
+      if (t.timeoutTimer) {
+        clearTimeout(t.timeoutTimer);
+        t.timeoutTimer = null;
+      }
+      const fill = document.getElementById('timeout-fill');
+      if (fill) {
+        fill.classList.remove('warn');
+        fill.style.transition = 'none';
+      }
+      document.querySelectorAll('.option').forEach(opt => {
+        opt.classList.remove('timeout-warn');
+      });
+    }
+
+    function handleTimeout() {
+      const t = state.training;
+      t.locked = true;
+
+      const question = t.currentQuestion;
+      // 记录智能难度（超时）
+      const responseMs = Math.round(performance.now() - t.timeoutStartTime);
+      smartDifficulty.recordAttempt(t.levelId, false, responseMs, true);
+      mastery.markError(t.levelId, question.expr, null, 'timeout');
+
+      audio.timeout();
+      ui.toast('没关系的~', 'warn', 1000);
+      updateProgressDisplay();
+
+      setTimeout(() => {
+        if (mastery.checkLevelPassed(t.levelId)) {
+          if (!profiles.get('progress').levels[t.levelId]?.passed) {
+            handleLevelPassed(t.levelId);
+            return;
+          }
+        }
+        showNextQuestion();
+      }, 1200);
+    }
+
+    /* =================================================================
+     * 模块：pages - parent
+     * ================================================================= */
+    pages.parent = function() {
+      router.go('parent');
+      const pid = profiles.activeId;
+      const active = profiles.getActive();
+      const progress = profiles.get('progress');
+      const masteryData = profiles.get('mastery');
+      const errorSets = profiles.get('errorSets');
+      const errors = profiles.get('errors');
+      const settings = profiles.get('settings');
+      const daily = profiles.get('daily');
+      const allLevels = levels.getAll();
+
+      let html = '';
+
+      // 0. 孩子档案 + 切换
+      html += `<div class="panel-section" style="display:flex;align-items:center;gap:var(--space-sm)">`;
+      html += `<div style="font-size:24px">${active ? (active.avatar || '👦') : '👦'}</div>`;
+      html += `<div style="flex:1;font-size:16px;font-weight:600">${active ? utils.escapeHtml(active.name) : '小朋友'}</div>`;
+      html += `<button class="panel-btn ghost" id="parent-switch-profile" style="font-size:12px">切换孩子</button>`;
+      html += `</div>`;
+
+      // 1. 智能分析
+      html += `<div class="panel-section">`;
+      html += `<div class="panel-section-title">🧠 智能分析</div>`;
+      // 周报
+      const weekly = reports.generatePeriodReport(pid, 7);
+      html += `
+        <div class="panel-row">
+          <div class="panel-row-label">本周练习天数</div>
+          <div class="panel-row-value">${weekly.practiceDays} 天</div>
+        </div>
+        <div class="panel-row">
+          <div class="panel-row-label">本周答题总数</div>
+          <div class="panel-row-value">${weekly.totalQuestions} 道</div>
+        </div>
+        <div class="panel-row">
+          <div class="panel-row-label">日均答题</div>
+          <div class="panel-row-value">${weekly.avgPerDay} 道/天</div>
+        </div>
+        <div class="panel-row">
+          <div class="panel-row-label">本周练习总时长</div>
+          <div class="panel-row-value">${utils.formatTime(weekly.totalMs)}</div>
+        </div>
+      `;
+      // 准确率趋势图
+      const trend = reports.getAccuracyTrend(pid, 14);
+      html += `<div style="font-size:13px;font-weight:600;margin:var(--space-sm) 0 var(--space-xs)">📈 准确率趋势（近 14 天）</div>`;
+      html += `<div id="parent-trend-chart" style="background:var(--color-bg);border-radius:var(--radius-sm);padding:4px"></div>`;
+      // 弱项分析
+      const weakPoints = reports.weakPointAnalysis(pid);
+      html += `<div style="font-size:13px;font-weight:600;margin:var(--space-sm) 0 var(--space-xs)">🎯 运算掌握率</div>`;
+      html += `<div id="parent-weak-chart" style="background:var(--color-bg);border-radius:var(--radius-sm);padding:4px"></div>`;
+      html += `</div>`;
+
+      // 2. 关卡掌握度
+      html += `<div class="panel-section">`;
+      html += `<div class="panel-section-title">📊 关卡掌握度</div>`;
+      allLevels.forEach(lv => {
+        const p = progress.levels[lv.id] || { unlocked: lv.id === 1, passed: false };
+        const stats = (masteryData.byLevel[lv.id] || { stats: { mastered: 0, pending: 0 } }).stats;
+        const errorCount = (errorSets.byLevel[lv.id] || []).length;
+        const unlocked = lv.id === 1 || (progress.levels[lv.id - 1] && progress.levels[lv.id - 1].passed);
+        // 智能难度建议
+        const sdLabel = smartDifficulty.getLabel(lv.id);
+        html += `
+          <div class="panel-row">
+            <div>
+              <div class="panel-row-label">${lv.icon} 第 ${lv.id} 关 · ${utils.escapeHtml(lv.name)}</div>
+              <div class="panel-row-value">
+                ${p.passed ? '✅ 已通过 · ' : (unlocked ? '进行中 · ' : '🔒 未解锁 · ')}
+                已掌握 ${stats.mastered} 道${errorCount > 0 ? ` · 待掌握 ${errorCount} 道` : ''}
+                ${sdLabel ? ` · ${sdLabel}` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      html += `</div>`;
+
+      // 3. 当前错题集
+      let totalPending = 0;
+      Object.values(errorSets.byLevel).forEach(arr => totalPending += (arr || []).length);
+      if (totalPending > 0) {
+        html += `<div class="panel-section">`;
+        html += `<div class="panel-section-title">⏳ 当前错题集（待掌握）</div>`;
+        allLevels.forEach(lv => {
+          const errs = errorSets.byLevel[lv.id] || [];
+          if (errs.length === 0) return;
+          html += `<div class="panel-row"><div class="panel-row-label">${lv.icon} 第 ${lv.id} 关</div></div>`;
+          errs.slice(0, 10).forEach(expr => {
+            const m = masteryData.byLevel[lv.id]?.questions[expr] || {};
+            const cooldown = m.cooldownUntil && Date.now() < m.cooldownUntil;
+            html += `
+              <div class="panel-error-item">
+                <div class="expr">${utils.escapeHtml(expr)} = ?</div>
+                <div class="meta">错 ${m.errorCount || 1} 次${cooldown ? '（冷却中）' : ''}</div>
+              </div>
+            `;
+          });
+        });
+        html += `</div>`;
+      }
+
+      // 4. 历史错题
+      if (errors.items.length > 0) {
+        html += `<div class="panel-section">`;
+        html += `<div class="panel-section-title">📚 历史错题</div>`;
+        errors.items.slice(-15).reverse().forEach(err => {
+          const mastered = !!err.removedAt;
+          html += `
+            <div class="panel-error-item ${mastered ? 'mastered' : ''}">
+              <div class="expr">${utils.escapeHtml(err.expr)} = ${err.answer}</div>
+              <div class="meta">${mastered ? '✅ 已掌握' : '未掌握'} · 错 ${err.hitCount} 次</div>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+
+      // 5. 过去 7 天练习
+      html += `<div class="panel-section">`;
+      html += `<div class="panel-section-title">⏱️ 过去 7 天练习</div>`;
+      const days = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = utils.formatDate(d.getTime());
+        const data = daily.byDate[key] || { activeMs: 0 };
+        const dayLabel = ['日', '一', '二', '三', '四', '五', '六'][d.getDay()];
+        days.push({ label: dayLabel, ms: data.activeMs });
+      }
+      const maxMs = Math.max(...days.map(d => d.ms), 60000);
+      html += `<div class="panel-bar-chart">`;
+      days.forEach(d => {
+        const h = Math.max(2, (d.ms / maxMs) * 70);
+        html += `
+          <div class="panel-bar-day">
+            <div class="panel-bar-fill" style="height:${h}px" title="${utils.formatTime(d.ms)}"></div>
+            <div class="panel-bar-label">${d.label}</div>
+          </div>
+        `;
+      });
+      html += `</div>`;
+      html += `</div>`;
+
+      // 6. 设置
+      html += `<div class="panel-section">`;
+      html += `<div class="panel-section-title">⚙️ 训练设置</div>`;
+      html += `
+        <div class="panel-row">
+          <div class="panel-row-label">一位数关卡超时</div>
+          <select id="set-timeout-single">
+            <option value="3" ${settings.timeoutSecByType.single === 3 ? 'selected' : ''}>3 秒</option>
+            <option value="5" ${settings.timeoutSecByType.single === 5 ? 'selected' : ''}>5 秒</option>
+            <option value="8" ${settings.timeoutSecByType.single === 8 ? 'selected' : ''}>8 秒</option>
+            <option value="10" ${settings.timeoutSecByType.single === 10 ? 'selected' : ''}>10 秒</option>
+          </select>
+        </div>
+        <div class="panel-row">
+          <div class="panel-row-label">两位数关卡超时</div>
+          <select id="set-timeout-double">
+            <option value="5" ${settings.timeoutSecByType.double === 5 ? 'selected' : ''}>5 秒</option>
+            <option value="10" ${settings.timeoutSecByType.double === 10 ? 'selected' : ''}>10 秒</option>
+            <option value="15" ${settings.timeoutSecByType.double === 15 ? 'selected' : ''}>15 秒</option>
+            <option value="30" ${settings.timeoutSecByType.double === 30 ? 'selected' : ''}>30 秒</option>
+          </select>
+        </div>
+        <div class="panel-row">
+          <div class="panel-row-label">错题冷却阈值</div>
+          <select id="set-cooldown-threshold">
+            <option value="3" ${settings.cooldownThreshold === 3 ? 'selected' : ''}>3 次</option>
+            <option value="5" ${settings.cooldownThreshold === 5 ? 'selected' : ''}>5 次</option>
+            <option value="10" ${settings.cooldownThreshold === 10 ? 'selected' : ''}>10 次</option>
+          </select>
+        </div>
+        <div class="panel-row">
+          <div class="panel-row-label">音效</div>
+          <input type="checkbox" id="set-sound" ${settings.sound ? 'checked' : ''}>
+        </div>
+      `;
+      html += `</div>`;
+
+      // 7. 操作
+      html += `<div class="panel-section">`;
+      html += `<div class="panel-section-title">🔧 操作</div>`;
+      html += `
+        <div class="panel-row">
+          <div class="panel-row-label">导出错题</div>
+          <button class="panel-btn" id="export-errors">导出</button>
+        </div>
+        <div class="panel-row">
+          <div class="panel-row-label">导出全部数据 (JSON)</div>
+          <button class="panel-btn" id="export-all">导出 JSON</button>
+        </div>
+        <div class="panel-row">
+          <div class="panel-row-label">导出答题记录 (CSV)</div>
+          <button class="panel-btn" id="export-csv">导出 CSV</button>
+        </div>
+        <div class="panel-row">
+          <div class="panel-row-label">导入数据</div>
+          <input type="file" id="import-file" accept=".json" style="display:none">
+          <button class="panel-btn ghost" id="import-btn">选择文件</button>
+        </div>
+        <div class="panel-row">
+          <div class="panel-row-label">重置当前关卡</div>
+          <button class="panel-btn ghost" data-action="reset-level">重置</button>
+        </div>
+        <div class="panel-row">
+          <div class="panel-row-label" style="color:var(--color-error)">重置全部数据</div>
+          <button class="panel-btn danger" id="reset-all">重置</button>
+        </div>
+      `;
+      html += `</div>`;
+
+      // 8. 关于
+      html += `<div class="panel-section" style="text-align:center;color:var(--color-text-sub);font-size:12px;">`;
+      const activeProfile = profiles.getActive();
+      html += `口算小达人 v${APP_VERSION} · 数据全部本地存储`;
+      html += `<br>当前孩子：${activeProfile ? utils.escapeHtml(activeProfile.name) : ''}`;
+      html += `</div>`;
+
+      document.getElementById('parent-content').innerHTML = html;
+
+      // 渲染图表
+      setTimeout(() => {
+        reports.renderChart(trend, 'parent-trend-chart');
+        reports.renderWeakChart(weakPoints, 'parent-weak-chart');
+      }, 50);
+
+      bindParentActions();
+    };
+
+    function bindParentActions() {
+      const settings = profiles.get('settings');
+
+      document.getElementById('set-timeout-single').onchange = (e) => {
+        settings.timeoutSecByType.single = parseInt(e.target.value);
+        profiles.set('settings', settings);
+        ui.toast('已保存', 'success');
+      };
+      document.getElementById('set-timeout-double').onchange = (e) => {
+        settings.timeoutSecByType.double = parseInt(e.target.value);
+        profiles.set('settings', settings);
+        ui.toast('已保存', 'success');
+      };
+      document.getElementById('set-cooldown-threshold').onchange = (e) => {
+        settings.cooldownThreshold = parseInt(e.target.value);
+        profiles.set('settings', settings);
+        ui.toast('已保存', 'success');
+      };
+      document.getElementById('set-sound').onchange = (e) => {
+        settings.sound = e.target.checked;
+        profiles.set('settings', settings);
+        audio.enabled = e.target.checked;
+        ui.toast('已保存', 'success');
+      };
+
+      document.getElementById('export-errors').onclick = () => {
+        const errors = profiles.get('errors');
+        const text = errors.items.map(e =>
+          `${e.expr} = ?  正确答案: ${e.answer}  关卡: 第 ${e.levelId} 关  ${e.removedAt ? '✅ 已掌握' : '❌ 未掌握'}  错 ${e.hitCount} 次`
+        ).join('\n');
+        const blob = new Blob([text || '暂无错题'], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `错题本-${utils.formatDate(Date.now())}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        ui.toast('已导出', 'success');
+      };
+
+      document.getElementById('export-all').onclick = () => {
+        const dump = {
+          exportedAt: Date.now(),
+          appVersion: APP_VERSION,
+          schemaVer: SCHEMA_VERSION,
+          data: {
+            profile: profiles.get('profile'),
+            settings: profiles.get('settings'),
+            progress: profiles.get('progress'),
+            mastery: profiles.get('mastery'),
+            errorSets: profiles.get('errorSets'),
+            errors: profiles.get('errors'),
+            achievements: profiles.get('achievements'),
+            challenges: profiles.get('challenges'),
+            daily: profiles.get('daily')
+          }
+        };
+        const blob = new Blob([JSON.stringify(dump, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `口算数据-${utils.formatDate(Date.now())}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        ui.toast('已导出', 'success');
+      };
+
+      document.getElementById('import-btn').onclick = () => {
+        document.getElementById('import-file').click();
+      };
+      document.getElementById('import-file').onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          const text = await file.text();
+          const data = JSON.parse(text);
+          if (!data.schemaVer || !data.data) {
+            ui.toast('文件格式不正确', 'error');
+            return;
+          }
+          const confirmed = await ui.confirm({
+            title: '导入数据？',
+            body: '将覆盖当前所有数据。此操作不可撤销。',
+            confirmText: '导入',
+            danger: true
+          });
+          if (!confirmed) return;
+          Object.entries(data.data).forEach(([k, v]) => {
+            if (v) profiles.set(k, v);
+          });
+          ui.toast('已导入', 'success');
+          pages.parent();
+        } catch (err) {
+          ui.toast('导入失败：' + err.message, 'error');
+        }
+      };
+
+      document.querySelectorAll('[data-action="reset-level"]').forEach(btn => {
+        btn.onclick = async () => {
+          const confirmed = await ui.confirm({
+            title: '重置当前关卡？',
+            body: '将清空当前关卡的掌握与错题记录。',
+            confirmText: '重置',
+            danger: true
+          });
+          if (confirmed) {
+            mastery.resetLevel(state.training.levelId || 1);
+            ui.toast('已重置', 'success');
+            pages.parent();
+          }
+        };
+      });
+
+      document.getElementById('reset-all').onclick = async () => {
+        const confirmed = await ui.confirm({
+          title: '重置全部数据？',
+          body: '将删除所有进度、错题、成就。此操作不可撤销。',
+          confirmText: '我已了解，删除',
+          cancelText: '取消',
+          danger: true,
+          requirePhrase: '删除'
+        });
+        if (confirmed) {
+          store.clearAll();
+          schema.init();
+          ui.toast('已重置', 'success');
+          setTimeout(() => location.reload(), 500);
+        }
+      };
+
+      // CSV 导出
+      const csvBtn = document.getElementById('export-csv');
+      if (csvBtn) {
+        csvBtn.onclick = () => {
+          const errors = profiles.get('errors');
+          const header = '算式,正确答案,关卡,状态,错误次数,超时次数,记录时间\n';
+          const rows = errors.items.map(e => {
+            const status = e.removedAt ? '已掌握' : '未掌握';
+            const time = new Date(e.recordedAt).toLocaleString('zh-CN');
+            return `"${e.expr}",${e.answer},第${e.levelId}关,${status},${e.hitCount || 1},${e.timeoutCount || 0},"${time}"`;
+          }).join('\n');
+          const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `答题记录-${utils.formatDate(Date.now())}.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+          ui.toast('CSV 已导出', 'success');
+        };
+      }
+
+      // 切换孩子
+      const switchBtn = document.getElementById('parent-switch-profile');
+      if (switchBtn) {
+        switchBtn.onclick = () => {
+          hideProfilePicker();
+          setTimeout(() => showProfilePicker(), 100);
+        };
+      }
+    }
+
+    /* =================================================================
+     * 模块：pages - errors
+     * ================================================================= */
+    pages.errors = function() {
+      router.go('errors');
+      renderErrors('pending');
+    };
+
+    function renderErrors(tab) {
+      const errorSets = profiles.get('errorSets');
+      const errors = profiles.get('errors');
+      const masteryData = profiles.get('mastery');
+      const allLevels = levels.getAll();
+
+      // Tab 切换
+      document.querySelectorAll('.tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.tab === tab);
+        t.onclick = () => renderErrors(t.dataset.tab);
+      });
+
+      const info = document.getElementById('errors-info');
+      const content = document.getElementById('errors-content');
+      let html = '';
+
+      if (tab === 'pending') {
+        info.style.display = 'block';
+        info.textContent = '💡 这些题会在你继续练习时自动重出';
+        const pendingItems = [];
+        allLevels.forEach(lv => {
+          const errs = errorSets.byLevel[lv.id] || [];
+          errs.forEach(expr => {
+            const m = masteryData.byLevel[lv.id]?.questions[expr] || {};
+            pendingItems.push({ lv, expr, m });
+          });
+        });
+        if (pendingItems.length === 0) {
+          html = `<div class="empty-state">
+            <div class="emoji">🎈</div>
+            <div class="msg">暂时没有错题啦~</div>
+            <div class="msg" style="margin-top:8px;font-size:14px">继续保持！</div>
+          </div>`;
+        } else {
+          pendingItems.forEach(({ lv, expr, m }) => {
+            const cooldown = m.cooldownUntil && Date.now() < m.cooldownUntil;
+            html += `
+              <div class="error-item">
+                <div class="expr">${lv.icon} ${utils.escapeHtml(expr)} = ?</div>
+                <div class="meta">第 ${lv.id} 关 · ${cooldown ? '冷却中（' + Math.ceil((m.cooldownUntil - Date.now()) / 60000) + ' 分钟后）' : '错 ' + (m.errorCount || 1) + ' 次'}</div>
+              </div>
+            `;
+          });
+          html += `<div style="text-align:center;margin-top:16px;color:var(--color-text-sub);font-size:14px;">继续练习时这些题会自动重出</div>`;
+        }
+      } else {
+        info.style.display = 'none';
+        const items = errors.items.filter(e => e.removedAt).slice(-30).reverse();
+        if (items.length === 0) {
+          html = `<div class="empty-state">
+            <div class="emoji">📚</div>
+            <div class="msg">还没有历史错题</div>
+          </div>`;
+        } else {
+          items.forEach(err => {
+            const lv = levels.get(err.levelId);
+            html += `
+              <div class="error-item">
+                <div class="expr">${utils.escapeHtml(err.expr)} = ${err.answer}</div>
+                <div class="meta">${lv ? lv.icon : ''} 第 ${err.levelId} 关 · ✅ 已掌握 · 错 ${err.hitCount} 次</div>
+              </div>
+            `;
+          });
+        }
+      }
+
+      content.innerHTML = html;
+    }
+
+    /* =================================================================
+     * 模块：成就（简化版）
+     * ================================================================= */
+    function checkAchievements() {
+      gamification.achievements.check();
+      // 更新成就 badge
+      const ad = profiles.get('achievements');
+      if (ad && ad.totalUnlocked > 0) {
+        const badge = document.getElementById('badge-achievements');
+        if (badge) {
+          badge.textContent = ad.totalUnlocked;
+          badge.style.display = 'flex';
+        }
+      }
+    }
+
+    /* =================================================================
+     * 模块：成就页
+     * ================================================================= */
+    pages.achievements = function() {
+      router.go('home');
+      const ad = profiles.get('achievements');
+      const allDefs = gamification.achievements.getAll();
+      const unlockedIds = ad ? new Set(ad.unlocked.map(a => a.id)) : new Set();
+      const totalUnlocked = ad ? ad.totalUnlocked : 0;
+
+      const content = document.getElementById('home-content');
+      let html = `
+        <div class="home-header">
+          <div class="home-title">🏅 成就</div>
+          <div class="home-subtitle">已解锁 ${totalUnlocked} / ${allDefs.length}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:var(--space-md);margin-bottom:80px">
+      `;
+
+      allDefs.forEach(def => {
+        const unlocked = unlockedIds.has(def.id);
+        html += `
+          <div style="background:${unlocked ? 'var(--color-bg-card)' : 'var(--color-bg)'};border-radius:var(--radius-md);padding:var(--space-md);text-align:center;opacity:${unlocked ? 1 : 0.4};box-shadow:${unlocked ? 'var(--shadow-sm)' : 'none'}">
+            <div style="font-size:36px;margin-bottom:var(--space-xs)">${def.icon}</div>
+            <div style="font-size:14px;font-weight:600">${def.title}</div>
+            <div style="font-size:11px;color:var(--color-text-sub);margin-top:4px">${def.desc}</div>
+          </div>
+        `;
+      });
+
+      html += `</div>`;
+      content.innerHTML = html;
+    };
+
+    /* =================================================================
+     * 模块：pages - profile selector
+     * ================================================================= */
+    function showProfilePicker() {
+      const backdrop = document.getElementById('profile-picker');
+      const list = document.getElementById('profile-picker-list');
+      const allProfiles = profiles.getAll();
+      const active = profiles.getActive();
+
+      list.innerHTML = allProfiles.map(p => `
+        <div class="profile-picker-item ${p.id === active?.id ? 'active' : ''}" data-pid="${p.id}">
+          <div class="profile-picker-item-avatar">${p.avatar || '👦'}</div>
+          <div class="profile-picker-item-info">
+            <div class="profile-picker-item-name">${utils.escapeHtml(p.name)}</div>
+            <div class="profile-picker-item-meta">${p.id === active?.id ? '当前' : ''}</div>
+          </div>
+          ${allProfiles.length > 1 ? `<button class="profile-picker-item-delete" data-del="${p.id}">✕</button>` : ''}
+        </div>
+      `).join('');
+
+      // 子项点击切换
+      list.querySelectorAll('.profile-picker-item').forEach(item => {
+        const pid = item.dataset.pid;
+        item.addEventListener('click', (e) => {
+          if (e.target.closest('.profile-picker-item-delete')) return;
+          if (pid === profiles.activeId) { hideProfilePicker(); return; }
+          profiles.switch(pid);
+          hideProfilePicker();
+          updateProfileUI();
+          pages.home();
+        });
+      });
+
+      // 删除按钮
+      list.querySelectorAll('.profile-picker-item-delete').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const pid = btn.dataset.del;
+          const profile = profiles.getAll().find(p => p.id === pid);
+          if (!profile) return;
+          const confirmed = await ui.confirm({
+            title: '删除孩子？',
+            body: `将删除「${profile.name}」的所有学习数据，此操作不可撤销。`,
+            confirmText: '删除',
+            danger: true
+          });
+          if (!confirmed) return;
+          profiles.remove(pid);
+          showProfilePicker();
+          updateProfileUI();
+          pages.home();
+        });
+      });
+
+      backdrop.classList.add('show');
+    }
+
+    function hideProfilePicker() {
+      document.getElementById('profile-picker').classList.remove('show');
+    }
+
+    async function handleAddProfile() {
+      const backdrop = document.getElementById('profile-picker');
+      // 使用 modal 输入名字
+      const modal = document.getElementById('modal');
+      modal.innerHTML = `
+        <div class="modal-title">添加孩子</div>
+        <div class="modal-body">给孩子取个名字吧~</div>
+        <input type="text" class="modal-input" id="new-profile-name" placeholder="输入名字" maxlength="10" autofocus>
+        <div style="display:flex;gap:var(--space-sm);margin-bottom:var(--space-md)">
+          ${['👦', '👧', '👶', '🧒', '🐱', '🐶', '🦊', '🐼'].map(a => `
+            <button class="avatar-opt ${a === '👦' ? 'selected' : ''}" data-avatar="${a}" style="flex:1;padding:8px;border-radius:var(--radius-md);font-size:24px;background:var(--color-bg);border:2px solid ${a === '👦' ? 'var(--color-primary)' : 'transparent'}">${a}</button>
+          `).join('')}
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn ghost" id="modal-cancel">取消</button>
+          <button class="modal-btn primary" id="modal-confirm">添加</button>
+        </div>
+      `;
+      document.getElementById('modal-backdrop').classList.add('show');
+
+      let selectedAvatar = '👦';
+      document.querySelectorAll('.avatar-opt').forEach(btn => {
+        btn.onclick = () => {
+          document.querySelectorAll('.avatar-opt').forEach(b => { b.style.borderColor = 'transparent'; });
+          btn.style.borderColor = 'var(--color-primary)';
+          selectedAvatar = btn.dataset.avatar;
+        };
+      });
+
+      document.getElementById('modal-cancel').onclick = () => {
+        document.getElementById('modal-backdrop').classList.remove('show');
+        modal.innerHTML = '';
+      };
+      document.getElementById('modal-confirm').onclick = () => {
+        const name = document.getElementById('new-profile-name').value.trim() || '小朋友';
+        profiles.create(name, selectedAvatar);
+        document.getElementById('modal-backdrop').classList.remove('show');
+        modal.innerHTML = '';
+        hideProfilePicker();
+        updateProfileUI();
+        pages.home();
+        ui.toast(`欢迎 ${name}！`, 'success');
+      };
+    }
+
+    function updateProfileUI() {
+      const active = profiles.getActive();
+      if (!active) return;
+      document.getElementById('home-profile-avatar').textContent = active.avatar || '👦';
+      document.getElementById('home-profile-name').textContent = active.name || '小朋友';
+    }
+
+    /* =================================================================
+     * 模块：boot（启动入口）
+     * ================================================================= */
+    function boot() {
+      // 1. 初始化数据
+      schema.init();
+      updateProfileUI();
+      audio.enabled = profiles.get('settings').sound;
+
+      // 2. 绑定全局事件
+      document.getElementById('profile-selector').onclick = showProfilePicker;
+      document.getElementById('profile-picker-close').onclick = hideProfilePicker;
+      document.getElementById('profile-picker-add').onclick = handleAddProfile;
+      document.getElementById('icon-achievements').onclick = () => pages.achievements();
+      document.getElementById('icon-parent').onclick = checkParentTap;
+      document.getElementById('training-parent').onclick = checkParentTap;
+      document.getElementById('training-back').onclick = () => {
+        clearTrainingTimeout();
+        pages.home();
+      };
+      document.getElementById('parent-back').onclick = () => {
+        // 返回上一页面
+        history.back();
+      };
+      document.getElementById('errors-back').onclick = () => {
+        pages.home();
+      };
+
+      // 3. 键盘快捷键
+      document.addEventListener('keydown', (e) => {
+        if (router.current === 'training' && !state.training.locked) {
+          const idx = ['1', '2', '3', '4'].indexOf(e.key);
+          if (idx >= 0 && state.training.currentOptions[idx] !== undefined) {
+            onOptionClick(idx, state.training.currentOptions[idx]);
+          }
+        }
+      });
+
+      // 4. 注册 Service Worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./service-worker.js').then(reg => {
+          // 监听新版本
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // 新版本已下载，提示用户
+                ui.toast('新版本已下载，刷新后生效', 'success', 3000);
+              }
+            });
+          });
+        }).catch(() => {});
+
+        // 监听来自 SW 的消息
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          if (event.data?.type === 'NEW_VERSION') {
+            ui.toast('新版本已就绪', 'success', 2000);
+          }
+        });
+      }
+
+      // 5. 检查版本更新
+      autoUpdate.check();
+
+      // 6. 检测成就
+      setInterval(checkAchievements, 2000);
+
+      // 7. 渲染首页
+      pages.home();
+    }
+
+    // 家长入口：连点 3 次 或 长按
+    let parentTapCount = 0;
+    let parentTapTimer = null;
+    let parentLongPressTimer = null;
+    function checkParentTap() {
+      parentTapCount++;
+      clearTimeout(parentTapTimer);
+      parentTapTimer = setTimeout(() => {
+        parentTapCount = 0;
+      }, 500);
+
+      if (parentTapCount >= 3) {
+        parentTapCount = 0;
+        pages.parent();
+      }
+    }
+    function setupLongPress(el) {
+      el.addEventListener('touchstart', () => {
+        parentLongPressTimer = setTimeout(() => {
+          pages.parent();
+        }, 2000);
+      });
+      el.addEventListener('touchend', () => {
+        clearTimeout(parentLongPressTimer);
+      });
+      el.addEventListener('mousedown', () => {
+        parentLongPressTimer = setTimeout(() => {
+          pages.parent();
+        }, 2000);
+      });
+      el.addEventListener('mouseup', () => {
+        clearTimeout(parentLongPressTimer);
+      });
+    }
+    setupLongPress(document.getElementById('icon-parent'));
+    setupLongPress(document.getElementById('training-parent'));
+
+    // 启动
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', boot);
+    } else {
+      boot();
+    }
+
+  })();
+  </script>
+</body>
+</html>

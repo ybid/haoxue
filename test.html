@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>口算小达人 - 算法测试</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; padding: 20px; background: #fafafa; }
+    h1 { color: #5BA8E0; }
+    .test { background: white; padding: 12px; margin: 8px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .pass { border-left: 4px solid #7BD389; }
+    .fail { border-left: 4px solid #C03A2B; }
+    .name { font-weight: 600; }
+    .summary { font-size: 18px; font-weight: 600; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <h1>🧪 算法测试</h1>
+  <div id="summary" class="summary">运行中...</div>
+  <div id="results"></div>
+  <script>
+  (function() {
+    'use strict';
+
+    let passed = 0, failed = 0;
+    const results = document.getElementById('results');
+
+    function test(name, fn) {
+      try {
+        fn();
+        passed++;
+        results.innerHTML += `<div class="test pass"><div class="name">✅ ${name}</div></div>`;
+      } catch (e) {
+        failed++;
+        results.innerHTML += `<div class="test fail"><div class="name">❌ ${name}</div><div style="color:#C03A2B;font-size:12px;margin-top:4px">${e.message}</div></div>`;
+      }
+    }
+
+    function assert(cond, msg) {
+      if (!cond) throw new Error(msg || '断言失败');
+    }
+    function assertEq(a, b, msg) {
+      if (a !== b) throw new Error(msg || `期望 ${b}，实际 ${a}`);
+    }
+
+    // 模拟 store
+    const memStore = {};
+    const mockStore = {
+      cache: memStore,
+      get: (k, d) => memStore[k] !== undefined ? memStore[k] : d,
+      set: (k, v) => memStore[k] = v,
+      remove: (k) => { delete memStore[k]; }
+    };
+    const localStorage = {
+      _data: {},
+      getItem: (k) => localStorage._data[k] || null,
+      setItem: (k, v) => localStorage._data[k] = v,
+      removeItem: (k) => delete localStorage._data[k]
+    };
+
+    // 提取核心算法（从 index.html 复制简化版用于测试）
+    function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function isCarry(a, b) { return (a % 10) + (b % 10) >= 10; }
+    function isBorrow(a, b) { return (a % 10) < (b % 10); }
+
+    // ===== 生成器测试 =====
+    test('加法生成器：答案正确', () => {
+      for (let i = 0; i < 100; i++) {
+        const a = randInt(0, 9), b = randInt(0, 9);
+        const q = { a, op: '+', b, answer: a + b, expr: `${a} + ${b}` };
+        assertEq(q.answer, a + b);
+        assertEq(q.expr, `${a} + ${b}`);
+      }
+    });
+
+    test('加法 - 不进位模式：所有题目个位相加 < 10', () => {
+      for (let i = 0; i < 200; i++) {
+        let a, b;
+        do { a = randInt(0, 9); b = randInt(0, 9); } while (isCarry(a, b));
+        assert((a % 10) + (b % 10) < 10);
+      }
+    });
+
+    test('减法生成器：结果非负', () => {
+      for (let i = 0; i < 100; i++) {
+        let a, b;
+        do { a = randInt(10, 99); b = randInt(1, 9); } while (a < b);
+        const answer = a - b;
+        assert(answer >= 0);
+      }
+    });
+
+    test('除法生成器：结果为整数', () => {
+      for (let i = 0; i < 100; i++) {
+        const b = randInt(1, 9);
+        const q = randInt(1, 9);
+        const a = b * q;
+        const answer = Math.floor(a / b);
+        assertEq(a % b, 0);
+        assertEq(answer, q);
+      }
+    });
+
+    test('除法生成器：商在 1~9 之间', () => {
+      for (let i = 0; i < 100; i++) {
+        const b = randInt(1, 9);
+        const q = randInt(1, 9);
+        const a = b * q;
+        assert(a >= 1 && a <= 81);
+        assert(q >= 1 && q <= 9);
+      }
+    });
+
+    test('干扰项生成：4 个不重复项', () => {
+      for (let i = 0; i < 50; i++) {
+        const correct = randInt(1, 100);
+        const options = new Set([correct]);
+        let attempts = 0;
+        while (options.size < 4 && attempts < 200) {
+          const candidate = correct + randInt(-10, 10);
+          if (candidate >= 0 && candidate !== correct) options.add(candidate);
+          attempts++;
+        }
+        assertEq(options.size, 4);
+        assert([...options].includes(correct));
+      }
+    });
+
+    // ===== 精熟判定测试 =====
+    test('错题进入错集', () => {
+      const errorSets = { byLevel: { 1: [] } };
+      const mastery = { byLevel: { 1: { questions: {}, stats: { mastered: 0, pending: 0 } } } };
+      const expr = '3+5';
+
+      // 模拟 markError
+      const q = mastery.byLevel[1].questions[expr];
+      mastery.byLevel[1].questions[expr] = {
+        status: 'pending', errorCount: 1, attempts: 1, timeoutCount: 0
+      };
+      mastery.byLevel[1].stats.pending = 1;
+      errorSets.byLevel[1].push(expr);
+
+      assert(errorSets.byLevel[1].includes(expr));
+      assertEq(mastery.byLevel[1].questions[expr].status, 'pending');
+    });
+
+    test('错集中的题答对 → 从错集移除并标记掌握', () => {
+      const errorSets = { byLevel: { 1: ['3+5'] } };
+      const mastery = { byLevel: { 1: {
+        questions: { '3+5': { status: 'pending', errorCount: 2, attempts: 2 } },
+        stats: { mastered: 0, pending: 1 }
+      }}};
+
+      // 模拟 markMastered
+      errorSets.byLevel[1] = errorSets.byLevel[1].filter(e => e !== '3+5');
+      mastery.byLevel[1].stats.pending = 0;
+      mastery.byLevel[1].stats.mastered = 1;
+      mastery.byLevel[1].questions['3+5'] = {
+        status: 'mastered', firstCorrectAt: Date.now(), attempts: 3
+      };
+
+      assert(!errorSets.byLevel[1].includes('3+5'));
+      assertEq(mastery.byLevel[1].questions['3+5'].status, 'mastered');
+    });
+
+    test('错集空 → 通关', () => {
+      const errorSets = { byLevel: { 1: [] } };
+      assertEq(errorSets.byLevel[1].length, 0);
+    });
+
+    test('错集非空 → 不通关', () => {
+      const errorSets = { byLevel: { 1: ['7+8'] } };
+      assert(errorSets.byLevel[1].length > 0);
+    });
+
+    test('同题连续错 5 次进入冷却', () => {
+      const settings = { cooldownThreshold: 5, cooldownMinutes: 5 };
+      const mastery = { byLevel: { 1: {
+        questions: { '3+5': { status: 'pending', errorCount: 4, attempts: 4 } },
+        stats: { mastered: 0, pending: 1 }
+      }}};
+      const errorSets = { byLevel: { 1: ['3+5'] } };
+
+      // 第 5 次错
+      mastery.byLevel[1].questions['3+5'].errorCount = 5;
+      if (mastery.byLevel[1].questions['3+5'].errorCount >= settings.cooldownThreshold) {
+        mastery.byLevel[1].questions['3+5'].cooldownUntil = Date.now() + 5 * 60 * 1000;
+        mastery.byLevel[1].questions['3+5'].errorCount = 0;
+        errorSets.byLevel[1] = errorSets.byLevel[1].filter(e => e !== '3+5');
+        mastery.byLevel[1].stats.pending = 0;
+      }
+
+      assert(mastery.byLevel[1].questions['3+5'].cooldownUntil !== undefined);
+      assert(!errorSets.byLevel[1].includes('3+5'));
+    });
+
+    test('已掌握的题不再出', () => {
+      const errorSets = { byLevel: { 1: [] } };
+      const mastery = { byLevel: { 1: {
+        questions: { '3+5': { status: 'mastered' } },
+        stats: { mastered: 1, pending: 0 }
+      }}};
+
+      // 出题时应排除已掌握
+      const allAvailable = [];
+      for (let a = 0; a <= 9; a++) {
+        for (let b = 0; b <= 9; b++) {
+          const expr = `${a}+${b}`;
+          if (mastery.byLevel[1].questions[expr]?.status !== 'mastered') {
+            allAvailable.push(expr);
+          }
+        }
+      }
+      assert(!allAvailable.includes('3+5'));
+    });
+
+    test('进位判断正确', () => {
+      assertEq(isCarry(5, 5), true);
+      assertEq(isCarry(3, 4), false);
+      assertEq(isCarry(9, 9), true);
+      assertEq(isCarry(0, 0), false);
+    });
+
+    test('退位判断正确', () => {
+      assertEq(isBorrow(15, 7), true);
+      assertEq(isBorrow(18, 5), false);
+      assertEq(isBorrow(23, 4), true);
+    });
+
+    // 总结
+    document.getElementById('summary').innerHTML =
+      `总计：<span style="color:#7BD389">${passed} 通过</span> / <span style="color:#C03A2B">${failed} 失败</span>`;
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --omit=dev
+
+      - name: Generate PNG icons
+        run: npm run generate-icons
+
+      - name: Create release archive
+        run: |
+          mkdir -p dist
+          cp -r index.html manifest.json service-worker.js icons/ dist/
+          cp nginx.conf Dockerfile docker-compose.yml dist/
+          cd dist
+          tar czf ../haoxue-release.tar.gz .
+          zip -r ../haoxue-release.zip .
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body_path: .github/release-template.md
+          files: |
+            haoxue-release.tar.gz
+            haoxue-release.zip
+          generate_release_notes: true

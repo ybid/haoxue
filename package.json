@@ -1,0 +1,21 @@
+{
+  "name": "haoxue",
+  "version": "1.0.0",
+  "description": "> 二年级口算无痛训练 · iPad 网页版 · PWA 单文件应用",
+  "main": "index.html",
+  "scripts": {
+    "generate-icons": "node generate-icons.js",
+    "start": "echo '使用 Docker: docker-compose up -d'",
+    "test": "node test-algorithm.js"
+  },
+  "keywords": ["education", "kids", "math", "pwa"],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "jsdom": "^29.1.1"
+  },
+  "optionalDependencies": {
+    "sharp": "^0.33.0"
+  }
+}
