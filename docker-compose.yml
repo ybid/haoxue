@@ -1,7 +1,16 @@
 services:
   haoxue:
-    build: .
+    image: docker.1ms.run/library/nginx:alpine
     ports:
       - "8080:80"
     restart: unless-stopped
     container_name: haoxue-math
+    volumes:
+      # 挂载整个项目目录（含 index.html / icons 等）
+      - ./:/usr/share/nginx/html
+    # 启动前先修复文件权限，解决 403
+    command: >
+      /bin/sh -c "
+      chmod -R 755 /usr/share/nginx/html &&
+      nginx -g 'daemon off;'
+      "
