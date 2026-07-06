@@ -11,11 +11,8 @@ services:
     restart: unless-stopped
     container_name: haoxue-math
     volumes:
-      # 主应用文件（直接挂载）
-      - ./index.html:/usr/share/nginx/html/index.html:ro
-      - ./manifest.json:/usr/share/nginx/html/manifest.json:ro
-      - ./service-worker.js:/usr/share/nginx/html/service-worker.js:ro
-      - ./icons:/usr/share/nginx/html/icons:ro
+      # 挂载整个项目目录，nginx 自动识别 index.html 等静态文件
+      - ./:/usr/share/nginx/html:ro
 
   # ============================================================
   # Watchtower - 自动更新
