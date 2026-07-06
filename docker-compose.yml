@@ -1,5 +1,12 @@
 services:
+  # ============================================================
+  # 口算小达人 - 主应用
+  # 首次部署使用 build: . 构建本地镜像
+  # 后续自动更新后，Watchtower 会从 ghcr.io 自动拉取新镜像
+  # ============================================================
   haoxue:
+    # 首次构建用本地 Dockerfile；后续 Watchtower 自动从 ghcr.io 拉取
+    image: ghcr.io/ybid/haoxue:latest
     build: .
     ports:
       - "8080:80"
@@ -11,5 +18,24 @@ services:
       timeout: 3s
       retries: 3
       start_period: 5s
-    # 如果不需要持久化存储 (localStorage 在浏览器端)，无需 volume
-    # 未来如需服务端存储可在此挂载数据目录
+
+  # ============================================================
+  # Watchtower - 自动检测 ghcr.io 新镜像并更新
+  # 每 5 分钟检查一次，发现新版本自动拉取+重建
+  # 首次 deploy 需要先注释掉，等主容器跑起来后再取消注释
+  # ============================================================
+  watchtower:
+    image: docker.1ms.run/library/containrrr/watchtower:latest
+    container_name: watchtower-haoxue
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: >
+      --interval 300
+      --cleanup
+      --include-stopped
+      haoxue-math
+    environment:
+      - WATCHTOWER_NO_STARTUP_MESSAGE=true
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
