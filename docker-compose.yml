@@ -1,8 +1,6 @@
 services:
   # ============================================================
   # 口算小达人 - 主应用
-  # 使用 nginx 直接挂载静态文件，无需 Dockerfile 构建
-  # 更新方式：替换文件后 docker restart haoxue-math
   # ============================================================
   haoxue:
     image: docker.1ms.run/library/nginx:alpine
@@ -11,13 +9,13 @@ services:
     restart: unless-stopped
     container_name: haoxue-math
     volumes:
-      # 挂载整个项目目录，nginx 自动识别 index.html 等静态文件
+      # 挂载整个项目目录（包含 index.html / icons / sw 等）
       - ./:/usr/share/nginx/html:ro
+      # 自定义 nginx 配置（解决 403 问题 + 缓存优化）
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
   # ============================================================
-  # Watchtower - 自动更新
-  # 每 5 分钟检查是否有新版本的 nginx 镜像
-  # 同时配合 GitHub Actions → ghcr.io 推送实现自动更新
+  # Watchtower - 自动检测 ghcr.io 新镜像并重启容器
   # ============================================================
   watchtower:
     image: docker.1ms.run/containrrr/watchtower:latest
