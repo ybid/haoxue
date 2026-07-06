@@ -1,31 +1,30 @@
 services:
   # ============================================================
   # 口算小达人 - 主应用
-  # 首次部署使用 build: . 构建本地镜像
-  # 后续自动更新后，Watchtower 会从 ghcr.io 自动拉取新镜像
+  # 使用 nginx 直接挂载静态文件，无需 Dockerfile 构建
+  # 更新方式：替换文件后 docker restart haoxue-math
   # ============================================================
   haoxue:
-    # 首次构建用本地 Dockerfile；后续 Watchtower 自动从 ghcr.io 拉取
-    image: ghcr.io/ybid/haoxue:latest
-    build: .
+    image: docker.1ms.run/library/nginx:alpine
     ports:
       - "8080:80"
     restart: unless-stopped
     container_name: haoxue-math
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 5s
+    volumes:
+      # 主应用文件（直接挂载，修改后立即生效）
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+      - ./manifest.json:/usr/share/nginx/html/manifest.json:ro
+      - ./service-worker.js:/usr/share/nginx/html/service-worker.js:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./icons:/usr/share/nginx/html/icons:ro
 
   # ============================================================
-  # Watchtower - 自动检测 ghcr.io 新镜像并更新
-  # 每 5 分钟检查一次，发现新版本自动拉取+重建
-  # 首次 deploy 需要先注释掉，等主容器跑起来后再取消注释
+  # Watchtower - 自动更新
+  # 每 5 分钟检查是否有新版本的 nginx 镜像
+  # 同时配合 GitHub Actions → ghcr.io 推送实现自动更新
   # ============================================================
   watchtower:
-    image: docker.1ms.run/library/containrrr/watchtower:latest
+    image: docker.1ms.run/containrrr/watchtower:latest
     container_name: watchtower-haoxue
     restart: unless-stopped
     volumes:
@@ -37,5 +36,3 @@ services:
       haoxue-math
     environment:
       - WATCHTOWER_NO_STARTUP_MESSAGE=true
-    labels:
-      - "com.centurylinklabs.watchtower.enable=false"
