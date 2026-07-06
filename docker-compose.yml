@@ -1,32 +1,7 @@
 services:
-  # ============================================================
-  # 口算小达人 - 主应用
-  # ============================================================
   haoxue:
-    image: docker.1ms.run/library/nginx:alpine
+    build: .
     ports:
       - "8080:80"
     restart: unless-stopped
     container_name: haoxue-math
-    volumes:
-      # 挂载整个项目目录（包含 index.html / icons / sw 等）
-      - ./:/usr/share/nginx/html:ro
-      # 自定义 nginx 配置（解决 403 问题 + 缓存优化）
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-
-  # ============================================================
-  # Watchtower - 自动检测 ghcr.io 新镜像并重启容器
-  # ============================================================
-  watchtower:
-    image: docker.1ms.run/containrrr/watchtower:latest
-    container_name: watchtower-haoxue
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: >
-      --interval 300
-      --cleanup
-      --include-stopped
-      haoxue-math
-    environment:
-      - WATCHTOWER_NO_STARTUP_MESSAGE=true
